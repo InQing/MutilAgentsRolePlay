@@ -32,5 +32,4 @@
 
 ## 交付要求
 
-- 完成开发后，更新 `docs/project-progress.md`。
-- 当架构、模块边界、技术选型或关键决策发生变化时，更新 `docs/project-context.md`。
+- 完成开发后，更新 `docs/project-progress.md`与 `docs/project-context.md`。

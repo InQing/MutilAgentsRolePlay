@@ -22,3 +22,5 @@ class WorldScheduler:
     def snapshot(self) -> list[RuntimeTask]:
         return sorted(self._tasks.values(), key=lambda task: (task.run_at, task.priority))
 
+    def replace(self, tasks: list[RuntimeTask]) -> None:
+        self._tasks = {task.id: task for task in tasks}

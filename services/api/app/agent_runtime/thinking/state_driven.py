@@ -15,6 +15,21 @@ class StateDrivenThinkingEngine(ThinkingEngine):
         character_state: CharacterState,
         visible_context: VisibleContext,
     ) -> tuple[ActionDecision, DirectorExplanation]:
+        if visible_context.task_intent == "check_group_chat":
+            decision = ActionDecision(
+                action_type=ActionType.GROUP_MESSAGE,
+                reason="The current task is to check in with the main group conversation.",
+                should_adjust_plan=False,
+            )
+            explanation = DirectorExplanation(
+                summary=(
+                    f"{character_state.display_name} reached a planned social check-in point "
+                    "and decided to speak in the main group."
+                ),
+                confidence=0.88,
+            )
+            return decision, explanation
+
         direct_event = next(
             (
                 event
@@ -68,4 +83,3 @@ class StateDrivenThinkingEngine(ThinkingEngine):
             confidence=0.78,
         )
         return decision, explanation
-

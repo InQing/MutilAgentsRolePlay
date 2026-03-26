@@ -1,0 +1,23 @@
+
+> dev:web
+> npm --workspace apps/web run dev
+
+
+> @mutilagentsroleplay/web@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.154.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 6.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 3.3s (597 modules)
+ GET / 200 in 3703ms
+ GET / 200 in 22ms
+ ✓ Compiled /director in 243ms (599 modules)
+ GET /director 200 in 337ms
+ GET /director 200 in 25ms
+ GET /director 200 in 17ms
+ GET / 200 in 22ms

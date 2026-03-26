@@ -36,3 +36,20 @@ packages/shared-contracts/ Shared TypeScript contracts
 ## Infrastructure
 
 The repository includes a `docker-compose.yml` file for PostgreSQL, Redis, and the API service. Copy `.env.example` to `.env` before starting containers on a server or local machine.
+
+## Lightweight local mode
+
+For a low-resource personal machine workflow, use the local scripts in `scripts/local`:
+
+```powershell
+./scripts/local/start-light-dev.ps1
+./scripts/local/start-light-dev.ps1 -WithWeb
+./scripts/local/stop-light-dev.ps1
+./scripts/local/run-backend-tests.ps1
+```
+
+This mode uses:
+
+- Python 3.12 virtual environment in `.venv`
+- SQLite database in `.local`
+- local API process instead of Dockerized backend

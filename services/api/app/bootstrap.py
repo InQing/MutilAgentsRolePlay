@@ -1,8 +1,11 @@
+from app.agent_runtime.executor import AutonomousActionExecutor
 from app.agent_runtime.thinking.state_driven import StateDrivenThinkingEngine
 from app.core.config import get_settings
 from app.director.policies.member_director_hybrid import MemberDirectorHybridPolicy
 from app.infra.cache.redis_client import RedisClientFactory
 from app.infra.db.session import DatabaseManager
+from app.social.service import SocialService
+from app.world.persistence import WorldPersistenceService
 from app.world.service import WorldRuntimeService
 
 
@@ -20,6 +23,15 @@ class RuntimeRegistry:
             thinking_engine=self.thinking_engine,
             default_speed_multiplier=settings.world_default_speed_multiplier,
         )
+        self.world_persistence = WorldPersistenceService(self.database)
+        self.social_service = SocialService(
+            self.database,
+            world_id=self.world_runtime.world_id,
+        )
+        self.autonomous_executor = AutonomousActionExecutor(
+            runtime=self.world_runtime,
+            social_gateway=self.social_service,
+        )
         self.world_runtime.bootstrap_sample_world()
 
 
@@ -32,3 +44,8 @@ def get_runtime_registry() -> RuntimeRegistry:
     if runtime_registry is None:
         runtime_registry = RuntimeRegistry()
     return runtime_registry
+
+
+def reset_runtime_registry() -> None:
+    global runtime_registry
+    runtime_registry = None

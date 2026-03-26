@@ -35,9 +35,31 @@ def test_world_runtime_advance_consumes_due_tasks() -> None:
         )
     )
 
-    events = runtime.advance(seconds=1)
+    _, events = runtime.advance(seconds=1)
 
     assert events
     assert any(event.payload.get("character_id") == "char-001" for event in events)
     assert any("char-001" in summary for summary in runtime.get_world_state().recent_events)
     assert first_task.id in {task.id for task in runtime.scheduler.snapshot()}
+
+
+def test_world_runtime_can_replace_persisted_state() -> None:
+    runtime = WorldRuntimeService(
+        thinking_engine=StateDrivenThinkingEngine(),
+        default_speed_multiplier=60.0,
+    )
+    runtime.bootstrap_sample_world()
+    original_events = runtime.get_recent_events(limit=10)
+
+    runtime.replace_runtime_state(
+        clock_state=runtime.clock.snapshot(),
+        characters=runtime.character_repository.list_all()[:1],
+        tasks=[],
+        events=original_events[:1],
+    )
+
+    state = runtime.get_world_state()
+
+    assert len(state.active_characters) == 1
+    assert state.pending_tasks == []
+    assert len(state.recent_events) == 1

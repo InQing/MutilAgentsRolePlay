@@ -1,9 +1,9 @@
-from enum import StrEnum
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
 
-class ActionType(StrEnum):
+class ActionType(str, Enum):
     GROUP_MESSAGE = "group_message"
     PRIVATE_MESSAGE = "private_message"
     MOMENT_POST = "moment_post"
@@ -23,6 +23,7 @@ class VisibleEvent(BaseModel):
 class VisibleContext(BaseModel):
     character_id: str
     current_plan_summary: str
+    task_intent: str | None = None
     recent_events: list[VisibleEvent] = Field(default_factory=list)
 
 
@@ -36,4 +37,3 @@ class ActionDecision(BaseModel):
 class DirectorExplanation(BaseModel):
     summary: str
     confidence: float = Field(default=0.75, ge=0.0, le=1.0)
-

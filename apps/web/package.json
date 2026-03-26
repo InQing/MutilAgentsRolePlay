@@ -10,7 +10,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@mutilagentsroleplay/shared-contracts": "workspace:*",
+    "@mutilagentsroleplay/shared-contracts": "file:../../packages/shared-contracts",
     "next": ">=15.0.0 <16.0.0",
     "react": ">=19.0.0 <20.0.0",
     "react-dom": ">=19.0.0 <20.0.0"
@@ -25,4 +25,3 @@
     "typescript": ">=5.0.0 <6.0.0"
   }
 }
-

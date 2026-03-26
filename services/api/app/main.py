@@ -15,6 +15,8 @@ async def lifespan(_: FastAPI):
     registry = get_runtime_registry()
     if settings.db_auto_create_schema:
         await initialize_database(registry.database)
+    await registry.world_persistence.bootstrap_or_load(registry.world_runtime)
+    await registry.social_service.ensure_defaults()
     yield
 
 

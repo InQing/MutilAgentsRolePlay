@@ -20,3 +20,8 @@ class WorldEventBus:
     def recent_summaries(self, *, limit: int = 10) -> list[str]:
         return [event.summary for event in list(self._history)[-limit:]]
 
+    def replace_history(self, events: list[WorldEvent]) -> None:
+        self._queue.clear()
+        self._history.clear()
+        for event in events:
+            self._history.append(event)

@@ -1,15 +1,25 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infra.db.base import Base
+
+
+class WorldRecord(Base):
+    __tablename__ = "worlds"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    current_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    speed_multiplier: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    paused: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class CharacterRecord(Base):
     __tablename__ = "characters"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     current_plan_summary: Mapped[str] = mapped_column(Text, nullable=False)
     emotion_state: Mapped[str] = mapped_column(String(64), nullable=False, default="steady")
@@ -21,6 +31,7 @@ class WorldEventRecord(Base):
     __tablename__ = "world_events"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    sequence_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     kind: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
@@ -39,3 +50,31 @@ class ScheduledTaskRecord(Base):
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
+
+class ConversationRecord(Base):
+    __tablename__ = "conversations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    conversation_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    conversation_meta: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+
+class ChatMessageRecord(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("conversations.id"),
+        nullable=False,
+        index=True,
+    )
+    conversation_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    sender_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    target_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    mentions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
