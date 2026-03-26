@@ -17,6 +17,7 @@ $webOut = Join-Path $tmpDir "web-light.out.log"
 $webErr = Join-Path $tmpDir "web-light.err.log"
 $localDataDir = Join-Path $root ".local"
 $sqlitePath = Join-Path $localDataDir "marp-dev.db"
+$localApiBaseUrl = "http://127.0.0.1:8000/api"
 
 New-Item -ItemType Directory -Force $tmpDir | Out-Null
 New-Item -ItemType Directory -Force $localDataDir | Out-Null
@@ -37,6 +38,8 @@ $env:MARP_ENV = "local-light"
 $env:MARP_DATABASE_URL = "sqlite+aiosqlite:///$($sqlitePath -replace '\\','/')"
 $env:MARP_REDIS_URL = "redis://localhost:6379/0"
 $env:MARP_DB_AUTO_CREATE_SCHEMA = "true"
+$env:MARP_API_BASE_URL = $localApiBaseUrl
+$env:NEXT_PUBLIC_API_BASE_URL = $localApiBaseUrl
 
 Write-Host "Starting local API with SQLite..."
 if (Test-Path $apiPidFile) {
@@ -66,6 +69,11 @@ if ($WithWeb) {
         -PassThru
     $webProcess.Id | Set-Content $webPidFile
     Write-Host "Web started at http://127.0.0.1:3000"
+    Write-Host "Available pages:"
+    Write-Host "  - World:    http://127.0.0.1:3000/"
+    Write-Host "  - Chat:     http://127.0.0.1:3000/chat"
+    Write-Host "  - Moments:  http://127.0.0.1:3000/moments"
+    Write-Host "  - Director: http://127.0.0.1:3000/director"
 }
 
 Write-Host "Use scripts/local/stop-light-dev.ps1 to stop local services."

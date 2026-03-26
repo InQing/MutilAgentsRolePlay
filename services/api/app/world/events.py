@@ -11,6 +11,7 @@ class WorldEventKind(str, Enum):
     DIRECTOR_NOTE = "director_note"
     ACTION_EXECUTED = "action_executed"
     ACTION_SKIPPED = "action_skipped"
+    RELATIONSHIP_UPDATED = "relationship_updated"
 
 
 class WorldEvent(BaseModel):

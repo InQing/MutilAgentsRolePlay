@@ -79,8 +79,8 @@ V1 暂不包含：
 ### 3.2 尚未完成的内容
 
 - 角色表达仍是模板化，不是真正的角色语言生成
-- relationship / plan / moment interaction 等领域尚未完整持久化
-- director 面板尚未接入真实 API 数据
+- relationship 已具备最小持久化与行动驱动更新能力，但 relationship / plan / moment interaction 仍未完整成型
+- director 面板已接入真实 API 数据，但延迟可见细则与导演控制仍未完整实现
 - Redis 尚未进入真实调度链路
 - WebSocket 实时广播尚未实现
 - Docker/PostgreSQL/Redis 一致性联调尚未完成
@@ -142,11 +142,12 @@ V1 暂不包含：
 
 2. 标准部署模式
 - Docker Compose
+- Web + API + PostgreSQL + Redis 容器化运行
 - PostgreSQL
 - Redis
-- API 容器化运行
+- 对外主要暴露 Web，API 默认仅绑定服务器本机回环地址
 
-目前真正跑通并经过测试的是轻量本地模式。
+目前真正跑通并经过测试的是轻量本地模式；云端 Docker Compose 已补齐 `web` 服务与服务间内网配置，但仍待真实服务器联调验证。
 
 ## 5. 仓库结构
 
@@ -286,11 +287,13 @@ MutilAgentsRolePlay/
 职责：
 
 - 承载导演模式的数据结构与权限策略
-- 当前仍处于“权限结构已搭好，真实业务尚未接完”的阶段
+- 聚合世界时钟、角色状态、关系快照、最近事件与会话预览，供导演面板读取
+- 当前已接入真实面板数据读取，但延迟可见细则与导演控制仍未完整落地
 
 关键文件：
 
 - `models.py`
+- `service.py`
 - `policies/base.py`
 - `policies/member_director_hybrid.py`
 
@@ -331,8 +334,9 @@ MutilAgentsRolePlay/
 职责：
 
 - 提供核心领域模型
-- 当前主要用于数据结构与未来扩展
-- 还未形成完整服务层和持久化闭环
+- `relationship` 已补齐最小服务层与数据库持久化闭环
+- `plan` 当前主要用于数据结构与未来扩展
+- 这些领域仍未形成完整规则系统
 
 ## 7. 运行时架构
 
@@ -434,6 +438,7 @@ MutilAgentsRolePlay/
 - `scheduled_tasks`
 - `conversations`
 - `chat_messages`
+- `relationships`
 
 ### 8.2 表职责
 
@@ -508,6 +513,18 @@ MutilAgentsRolePlay/
 - created_at
 - target id
 - mentions
+
+#### `relationships`
+
+保存：
+
+- relationship id
+- world id
+- source_character_id
+- target_character_id
+- affinity
+- labels
+- updated_at
 
 ### 8.3 当前持久化模式
 
@@ -701,18 +718,23 @@ MutilAgentsRolePlay/
 ### 12.1 当前页面
 
 - 首页
+- 群聊页
+- 朋友圈页
 - 导演页
 
 ### 12.2 当前能力
 
 - 能运行
 - 能展示项目方向和当前骨架
+- 首页已可读取真实 world state，并提供前端“推进世界”入口
+- 群聊页已可读取真实会话与消息，并支持向默认群聊发送消息
+- 朋友圈页已可读取真实 moment 流，并支持发布新动态
+- 导演页已可读取真实 director panel API，并展示角色快照、关系快照、事件日志与会话预览
 
 ### 12.3 当前限制
 
-- 没接真实 API
-- 没有世界状态实时显示
-- 没有群聊/私聊/朋友圈可视化页面
+- 没有世界状态实时推送
+- 还没有私聊可视化页面
 
 ## 13. 当前测试基线
 

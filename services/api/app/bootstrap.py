@@ -4,6 +4,7 @@ from app.core.config import get_settings
 from app.director.policies.member_director_hybrid import MemberDirectorHybridPolicy
 from app.infra.cache.redis_client import RedisClientFactory
 from app.infra.db.session import DatabaseManager
+from app.relationship.service import RelationshipService
 from app.social.service import SocialService
 from app.world.persistence import WorldPersistenceService
 from app.world.service import WorldRuntimeService
@@ -28,9 +29,14 @@ class RuntimeRegistry:
             self.database,
             world_id=self.world_runtime.world_id,
         )
+        self.relationship_service = RelationshipService(
+            self.database,
+            world_id=self.world_runtime.world_id,
+        )
         self.autonomous_executor = AutonomousActionExecutor(
             runtime=self.world_runtime,
             social_gateway=self.social_service,
+            relationship_service=self.relationship_service,
         )
         self.world_runtime.bootstrap_sample_world()
 

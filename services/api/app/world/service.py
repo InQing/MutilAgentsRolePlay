@@ -123,6 +123,9 @@ class WorldRuntimeService:
     def get_recent_events(self, *, limit: int = 10) -> list[WorldEvent]:
         return self.event_repository.list_all()[-limit:]
 
+    def list_characters(self) -> list[CharacterState]:
+        return self.character_repository.list_all()
+
     def get_pending_tasks(self) -> list[RuntimeTask]:
         return self.scheduler.snapshot()
 

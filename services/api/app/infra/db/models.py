@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infra.db.base import Base
@@ -78,3 +78,23 @@ class ChatMessageRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     target_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     mentions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+
+
+class RelationshipRecord(Base):
+    __tablename__ = "relationships"
+    __table_args__ = (
+        UniqueConstraint(
+            "world_id",
+            "source_character_id",
+            "target_character_id",
+            name="uq_relationships_world_source_target",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_character_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    target_character_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    affinity: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    labels: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

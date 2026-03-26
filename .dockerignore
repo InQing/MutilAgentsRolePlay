@@ -1,0 +1,12 @@
+.git
+.codex-tmp
+.local
+.venv
+node_modules
+apps/web/.next
+apps/web/tsconfig.tsbuildinfo
+services/api/.pytest_cache
+services/api/tests/__pycache__
+services/api/app/__pycache__
+**/__pycache__
+*.pyc

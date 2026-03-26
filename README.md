@@ -26,16 +26,32 @@ packages/shared-contracts/ Shared TypeScript contracts
 - `WorkflowRunner`: future hook for LangGraph or other orchestration layers
 - `LLMClient`: future hook for model provider integrations
 
-## Next steps
+## Current runnable scope
 
-1. Install frontend dependencies in `apps/web`
-2. Create a Python virtual environment for `services/api`
-3. Start PostgreSQL and Redis with `docker compose up -d postgres redis`
-4. Start implementing domain logic from the V1 blueprint in `docs/v1-solution-and-blueprint.md`
+The project already supports a lightweight local flow where you can:
 
-## Infrastructure
+- view real world state on `/`
+- advance the world from the frontend
+- read and post in the default group chat on `/chat`
+- read and post in the default moments feed on `/moments`
+- inspect director data on `/director`
 
-The repository includes a `docker-compose.yml` file for PostgreSQL, Redis, and the API service. Copy `.env.example` to `.env` before starting containers on a server or local machine.
+## Docker deployment
+
+The repository now includes a cloud-oriented `docker-compose.yml` for:
+
+- `web`
+- `api`
+- `postgres`
+- `redis`
+
+For Ubuntu server deployment:
+
+1. Copy `.env.example` to `.env`
+2. Run `docker compose up -d --build`
+3. Open `/`, `/chat`, `/moments`, `/director` from the server domain or IP
+
+Detailed instructions are in [docs/ubuntu-docker-deployment.md](docs/ubuntu-docker-deployment.md).
 
 ## Lightweight local mode
 
@@ -53,3 +69,29 @@ This mode uses:
 - Python 3.12 virtual environment in `.venv`
 - SQLite database in `.local`
 - local API process instead of Dockerized backend
+- explicit frontend API base URL pointing to `http://127.0.0.1:8000/api`
+
+### Recommended local startup
+
+For the current “basic runnable” state, the fastest path is:
+
+```powershell
+./scripts/local/start-light-dev.ps1 -WithWeb
+```
+
+After startup, open:
+
+- `http://127.0.0.1:3000/` for world overview and world advance
+- `http://127.0.0.1:3000/chat` for the minimal group chat page
+- `http://127.0.0.1:3000/moments` for the minimal moments page
+- `http://127.0.0.1:3000/director` for the director panel
+
+### Frontend API base URL
+
+The frontend defaults to `http://127.0.0.1:8000/api` in lightweight local mode.
+
+If you need to override it manually, copy:
+
+- `apps/web/.env.local.example`
+
+to `apps/web/.env.local` and adjust `NEXT_PUBLIC_API_BASE_URL`.

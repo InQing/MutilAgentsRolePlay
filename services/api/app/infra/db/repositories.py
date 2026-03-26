@@ -1,8 +1,8 @@
 from collections.abc import Sequence
-
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.character.models import CharacterState
@@ -10,10 +10,12 @@ from app.infra.db.models import (
     CharacterRecord,
     ChatMessageRecord,
     ConversationRecord,
+    RelationshipRecord,
     ScheduledTaskRecord,
     WorldEventRecord,
     WorldRecord,
 )
+from app.relationship.models import RelationshipSnapshot
 from app.social.models import ConversationSummary, ConversationType, CreateMessageRequest, MessageRecord
 from app.world.models import ClockState
 from app.world.events import RuntimeTask, WorldEvent
@@ -382,3 +384,109 @@ class AsyncMessageRepository:
         )
         self.session.add(record)
         return message
+
+
+class AsyncRelationshipRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def ensure_defaults_for_world(
+        self,
+        *,
+        world_id: str,
+        character_ids: Sequence[str],
+    ) -> None:
+        normalized_ids = sorted(set(character_ids))
+        expected_pairs = [
+            (source_id, target_id)
+            for source_id in normalized_ids
+            for target_id in normalized_ids
+            if source_id != target_id
+        ]
+        if not expected_pairs:
+            return
+
+        result = await self.session.execute(
+            select(
+                RelationshipRecord.source_character_id,
+                RelationshipRecord.target_character_id,
+            ).where(RelationshipRecord.world_id == world_id)
+        )
+        existing_pairs = set(result.all())
+        current_time = datetime.now(timezone.utc)
+
+        self.session.add_all(
+            [
+                RelationshipRecord(
+                    id=f"rel-{uuid4().hex}",
+                    world_id=world_id,
+                    source_character_id=source_id,
+                    target_character_id=target_id,
+                    affinity=0.0,
+                    labels=[],
+                    updated_at=current_time,
+                )
+                for source_id, target_id in expected_pairs
+                if (source_id, target_id) not in existing_pairs
+            ]
+        )
+
+    async def list_for_world(self, *, world_id: str) -> list[RelationshipSnapshot]:
+        result = await self.session.execute(
+            select(RelationshipRecord)
+            .where(RelationshipRecord.world_id == world_id)
+            .order_by(RelationshipRecord.affinity.desc(), RelationshipRecord.updated_at.desc())
+        )
+        return [
+            RelationshipSnapshot(
+                source_character_id=record.source_character_id,
+                target_character_id=record.target_character_id,
+                affinity=record.affinity,
+                labels=record.labels,
+                updated_at=record.updated_at,
+            )
+            for record in result.scalars().all()
+        ]
+
+    async def apply_affinity_delta(
+        self,
+        *,
+        world_id: str,
+        source_character_id: str,
+        target_character_id: str,
+        delta: float,
+        label: str,
+        updated_at: datetime,
+    ) -> RelationshipSnapshot:
+        result = await self.session.execute(
+            select(RelationshipRecord).where(
+                RelationshipRecord.world_id == world_id,
+                RelationshipRecord.source_character_id == source_character_id,
+                RelationshipRecord.target_character_id == target_character_id,
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            record = RelationshipRecord(
+                id=f"rel-{uuid4().hex}",
+                world_id=world_id,
+                source_character_id=source_character_id,
+                target_character_id=target_character_id,
+                affinity=0.0,
+                labels=[],
+                updated_at=updated_at,
+            )
+            self.session.add(record)
+
+        record.affinity = max(-1.0, min(1.0, record.affinity + delta))
+        record.updated_at = updated_at
+        if label and label not in record.labels:
+            record.labels = [*record.labels[-2:], label]
+
+        return RelationshipSnapshot(
+            source_character_id=record.source_character_id,
+            target_character_id=record.target_character_id,
+            affinity=record.affinity,
+            labels=record.labels,
+            updated_at=record.updated_at,
+        )

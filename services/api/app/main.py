@@ -17,6 +17,9 @@ async def lifespan(_: FastAPI):
         await initialize_database(registry.database)
     await registry.world_persistence.bootstrap_or_load(registry.world_runtime)
     await registry.social_service.ensure_defaults()
+    await registry.relationship_service.ensure_defaults(
+        characters=registry.world_runtime.list_characters()
+    )
     yield
 
 

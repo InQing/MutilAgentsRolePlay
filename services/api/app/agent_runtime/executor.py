@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from app.agent_runtime.types import ActionDecision, ActionType, DirectorExplanation, VisibleContext, VisibleEvent
 from app.character.models import CharacterState
+from app.relationship.service import RelationshipService
 from app.social.interfaces import AutonomousSocialGateway
 from app.social.models import MessageRecord
 from app.world.events import RuntimeTask, WorldEvent, WorldEventKind
@@ -22,9 +23,11 @@ class AutonomousActionExecutor:
         *,
         runtime: WorldRuntimeService,
         social_gateway: AutonomousSocialGateway,
+        relationship_service: RelationshipService | None = None,
     ) -> None:
         self.runtime = runtime
         self.social_gateway = social_gateway
+        self.relationship_service = relationship_service
 
     async def execute_due_tasks(
         self,
@@ -158,6 +161,11 @@ class AutonomousActionExecutor:
                 },
             )
         )
+        await self._apply_relationship_updates(
+            character=character,
+            decision=decision,
+            message=message,
+        )
         return message
 
     def _render_content(
@@ -182,3 +190,72 @@ class AutonomousActionExecutor:
                 "正在慢慢推进，晚点应该会更热闹。"
             )
         return f"{character.display_name} 暂时没有新的公开动作。"
+
+    async def _apply_relationship_updates(
+        self,
+        *,
+        character: CharacterState,
+        decision: ActionDecision,
+        message: MessageRecord,
+    ) -> None:
+        if self.relationship_service is None:
+            return
+
+        target_ids = self._resolve_relationship_targets(
+            actor_id=character.id,
+            decision=decision,
+            message=message,
+        )
+        if not target_ids:
+            return
+
+        updated_relationships = await self.relationship_service.apply_social_interaction(
+            source_character_id=character.id,
+            target_character_ids=target_ids,
+            interaction_kind=decision.action_type.value,
+        )
+        if not updated_relationships:
+            return
+
+        target_names = []
+        for target_id in target_ids:
+            target_character = self.runtime.get_character(target_id)
+            if target_character is not None:
+                target_names.append(target_character.display_name)
+
+        self.runtime.record_event(
+            WorldEvent(
+                world_id=self.runtime.world_id,
+                kind=WorldEventKind.RELATIONSHIP_UPDATED,
+                summary=(
+                    f"{character.display_name} 的关系图谱已根据最近一次"
+                    f"{decision.action_type.value} 更新。"
+                ),
+                created_at=self.runtime.clock.snapshot().now,
+                payload={
+                    "character_id": character.id,
+                    "target_character_id": target_ids[0],
+                    "relationship_targets": ", ".join(target_names),
+                    "updated_edge_count": str(len(updated_relationships)),
+                },
+            )
+        )
+
+    def _resolve_relationship_targets(
+        self,
+        *,
+        actor_id: str,
+        decision: ActionDecision,
+        message: MessageRecord,
+    ) -> list[str]:
+        if decision.action_type == ActionType.PRIVATE_MESSAGE:
+            return [target_id for target_id in [message.target_id or decision.target_id] if target_id]
+
+        if decision.action_type in {ActionType.GROUP_MESSAGE, ActionType.MOMENT_POST}:
+            return [
+                character.id
+                for character in self.runtime.list_characters()
+                if character.id != actor_id
+            ]
+
+        return []
