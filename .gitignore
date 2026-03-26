@@ -1,0 +1,23 @@
+# Node / web
+node_modules/
+.next/
+dist/
+coverage/
+
+# Python / api
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+*.pyc
+
+# Environment
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

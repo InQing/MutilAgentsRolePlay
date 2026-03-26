@@ -1,0 +1,7 @@
+﻿interface:
+  display_name: "MutilAgentsRolePlay Memory"
+  short_description: "Track this repo's context and progress"
+  default_prompt: "Use $mutilagentsroleplay-memory to read the project docs before work and update them after meaningful changes."
+
+policy:
+  allow_implicit_invocation: true
