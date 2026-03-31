@@ -18,6 +18,10 @@ class PermissionView(BaseModel):
     can_control_world: bool
 
 
+class UpdateWorldSpeedRequest(BaseModel):
+    speed_multiplier: float = Field(gt=0.0)
+
+
 class DirectorLogEntry(BaseModel):
     event_id: str
     sequence_number: int
@@ -61,6 +65,19 @@ class DirectorRelationshipEdge(BaseModel):
     updated_at: datetime | None = None
 
 
+class DirectorMomentInteractionEntry(BaseModel):
+    id: str
+    interaction_type: str
+    actor_id: str
+    actor_display_name: str
+    target_moment_id: str
+    target_moment_preview: str
+    target_moment_sender_id: str | None = None
+    target_moment_sender_name: str | None = None
+    content: str | None = None
+    created_at: datetime
+
+
 class DirectorPanelState(BaseModel):
     world_id: str
     current_time: datetime
@@ -72,4 +89,5 @@ class DirectorPanelState(BaseModel):
     characters: list[DirectorCharacterSnapshot] = Field(default_factory=list)
     relationships: list[DirectorRelationshipEdge] = Field(default_factory=list)
     conversations: list[DirectorConversationPreview] = Field(default_factory=list)
+    moment_interactions: list[DirectorMomentInteractionEntry] = Field(default_factory=list)
     recent_logs: list[DirectorLogEntry] = Field(default_factory=list)

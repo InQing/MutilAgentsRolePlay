@@ -80,6 +80,19 @@ export interface DirectorRelationshipEdgeContract {
   updated_at?: string | null;
 }
 
+export interface DirectorMomentInteractionEntryContract {
+  id: string;
+  interaction_type: string;
+  actor_id: string;
+  actor_display_name: string;
+  target_moment_id: string;
+  target_moment_preview: string;
+  target_moment_sender_id?: string | null;
+  target_moment_sender_name?: string | null;
+  content?: string | null;
+  created_at: string;
+}
+
 export interface DirectorPanelStateContract {
   world_id: string;
   current_time: string;
@@ -97,6 +110,7 @@ export interface DirectorPanelStateContract {
   characters: DirectorCharacterSnapshotContract[];
   relationships: DirectorRelationshipEdgeContract[];
   conversations: DirectorConversationPreviewContract[];
+  moment_interactions: DirectorMomentInteractionEntryContract[];
   recent_logs: DirectorLogEntryContract[];
 }
 

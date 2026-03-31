@@ -86,13 +86,23 @@
 - 2026-03-31：新增 `plans` 持久化表与 runtime 内 plan repository，bootstrap 初始任务与 follow-up task 现均从 plan 对象派生，调度任务 payload 会稳定携带 `plan_id`。
 - 2026-03-31：world persistence 现会同步持久化并恢复 plan，对应恢复后的 pending task 会继续指向已恢复的 plan；同一 active plan 在 runtime 中只保留一条当前 pending task。
 - 2026-03-31：新增 plan 持久化测试，覆盖 task 从 plan 派生、plan 恢复后与 pending task 对齐；本地轻量模式下后端测试扩展到 `26` 项，当前全部通过。
+- 2026-03-31：将 `.codex/`、`.codex-tmp/` 与 `services/api/mutilagentsroleplay_api.egg-info/` 加入 `.gitignore`，后续本地工具与调试产物不再默认污染工作区视图。
+- 2026-03-31：导演面板开始落地延迟可见规则：私聊消息预览、角色计划摘要与关系边现在都会按 `director_visibility_delay_seconds` 做延迟展示过滤。
+- 2026-03-31：新增导演延迟可见测试，覆盖私聊、计划、关系三类敏感信息的延迟显示行为；本地轻量模式下后端测试扩展到 `27` 项，当前全部通过。
+- 2026-03-31：新增导演控制 API：`/api/director/pause`、`/api/director/resume`、`/api/director/speed`，控制动作会持久化 world clock，并记录 `director_note` 事件供导演面板回看。
+- 2026-03-31：导演控制最小闭环现已可用：暂停后 world advance 不再推进时间，恢复后重新推进，加速后 world clock 会按新的 `speed_multiplier` 生效。
+- 2026-03-31：新增导演控制 API 测试，覆盖 pause / resume / speed 的状态变更、world advance 联动与导演日志可见性；本地轻量模式下后端测试扩展到 `28` 项，当前全部通过。
+- 2026-03-31：导演页前端现已接入 pause / resume / speed 三个控制入口，操作会通过同源代理调用真实导演控制 API，并在成功后刷新 panel 状态与最近导演日志。
+- 2026-03-31：`/api/director/panel` 新增 `moment_interactions` 聚合区块，导演页现可展示进入可见窗口的朋友圈评论 / 点赞结果。
+- 2026-03-31：新增统一导演可见性 helper，当前会对私聊、计划、关系、moment interaction 与相关 director log 做统一过滤；控制动作产生的 `director_note` 保持即时可见。
+- 2026-03-31：新增导演聚合与可见性测试，覆盖 moment interaction 延迟显示、director note 即时可见与导演面板返回结构；本地轻量模式下后端测试扩展到 `29` 项，当前全部通过。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 落地导演模式的延迟可见规则，先补私聊、计划和关系变化的延迟展示逻辑
-  - 增加导演控制能力最小闭环，例如暂停 / 恢复 / 加速
-  - 基于已完成的 moment interaction 后端链路，补前端可视化与导演视图中的互动展示
+  - 在当前导演控制与互动展示已落地的基础上，继续补 inject event 能力
+  - 继续细化导演延迟可见规则，把更多事件类型纳入统一可见性判断
+  - 为导演页补更完整的前端校验与交互回归检查
 - 导演能力补齐后，按以下顺序继续开发：
   - 将当前模板化消息表达升级为更完整的角色表达生成逻辑
   - 把 Redis 真正接入事件队列与调度协作链路

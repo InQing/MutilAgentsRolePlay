@@ -36,6 +36,32 @@ export async function fetchDirectorPanel(): Promise<DirectorPanelStateContract |
   return fetchBackendJson<DirectorPanelStateContract>("/director/panel");
 }
 
+export async function pauseDirectorWorld(): Promise<DirectorPanelStateContract | null> {
+  return fetchBackendJson<DirectorPanelStateContract>("/director/pause", {
+    method: "POST"
+  });
+}
+
+export async function resumeDirectorWorld(): Promise<DirectorPanelStateContract | null> {
+  return fetchBackendJson<DirectorPanelStateContract>("/director/resume", {
+    method: "POST"
+  });
+}
+
+export async function updateDirectorWorldSpeed(
+  speedMultiplier: number
+): Promise<DirectorPanelStateContract | null> {
+  return fetchBackendJson<DirectorPanelStateContract>("/director/speed", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      speed_multiplier: speedMultiplier
+    })
+  });
+}
+
 export async function fetchWorldState(): Promise<WorldStateContract | null> {
   return fetchBackendJson<WorldStateContract>("/world/state");
 }
