@@ -2,6 +2,9 @@ from dataclasses import dataclass
 
 from app.agent_runtime.types import ActionDecision, ActionType, DirectorExplanation, VisibleContext, VisibleEvent
 from app.character.models import CharacterState
+from app.expression.interfaces import ExpressionGenerator
+from app.expression.models import ExpressionInput, ExpressionRecentEvent
+from app.expression.service import CharacterExpressionService
 from app.relationship.service import RelationshipService
 from app.social.interfaces import AutonomousSocialGateway
 from app.social.models import MessageRecord
@@ -23,10 +26,12 @@ class AutonomousActionExecutor:
         *,
         runtime: WorldRuntimeService,
         social_gateway: AutonomousSocialGateway,
+        expression_generator: ExpressionGenerator | None = None,
         relationship_service: RelationshipService | None = None,
     ) -> None:
         self.runtime = runtime
         self.social_gateway = social_gateway
+        self.expression_generator = expression_generator or CharacterExpressionService()
         self.relationship_service = relationship_service
 
     async def execute_due_tasks(
@@ -62,6 +67,7 @@ class AutonomousActionExecutor:
                 character=character,
                 decision=decision,
                 explanation=explanation,
+                visible_context=visible_context,
             )
             self.runtime.schedule_follow_up_task(character=character, previous_decision=decision)
             executions.append(
@@ -81,6 +87,7 @@ class AutonomousActionExecutor:
         character: CharacterState,
         decision: ActionDecision,
         explanation: DirectorExplanation,
+        visible_context: VisibleContext,
     ) -> MessageRecord | None:
         if decision.action_type == ActionType.IGNORE:
             self.runtime.record_event(
@@ -96,9 +103,12 @@ class AutonomousActionExecutor:
             )
             return None
 
-        content = self._render_content(character=character, decision=decision)
-
         if decision.action_type == ActionType.GROUP_MESSAGE:
+            content = self._render_content(
+                character=character,
+                decision=decision,
+                visible_context=visible_context,
+            )
             message = await self.social_gateway.post_group_message(
                 sender_id=character.id,
                 content=content,
@@ -119,12 +129,25 @@ class AutonomousActionExecutor:
                     )
                 )
                 return None
+            target_character = self.runtime.get_character(target_id)
+            content = self._render_content(
+                character=character,
+                decision=decision,
+                visible_context=visible_context,
+                target_id=target_id,
+                target_display_name=target_character.display_name if target_character is not None else None,
+            )
             message = await self.social_gateway.post_private_message(
                 sender_id=character.id,
                 target_id=target_id,
                 content=content,
             )
         elif decision.action_type == ActionType.MOMENT_POST:
+            content = self._render_content(
+                character=character,
+                decision=decision,
+                visible_context=visible_context,
+            )
             message = await self.social_gateway.post_moment(
                 sender_id=character.id,
                 content=content,
@@ -173,23 +196,35 @@ class AutonomousActionExecutor:
         *,
         character: CharacterState,
         decision: ActionDecision,
+        visible_context: VisibleContext,
+        target_id: str | None = None,
+        target_display_name: str | None = None,
     ) -> str:
-        if decision.action_type == ActionType.GROUP_MESSAGE:
-            return (
-                f"{character.display_name}：我刚在处理“{character.current_plan_summary}”，"
-                "先来群里冒个泡，看看大家现在在聊什么。"
-            )
-        if decision.action_type == ActionType.PRIVATE_MESSAGE:
-            return (
-                f"{character.display_name}：我刚看到你的消息了。"
-                "我这边还在忙手头的安排，不过可以先和你对一下。"
-            )
-        if decision.action_type == ActionType.MOMENT_POST:
-            return (
-                f"{character.display_name}：今天的节奏有点满，不过“{character.current_plan_summary}”"
-                "正在慢慢推进，晚点应该会更热闹。"
-            )
-        return f"{character.display_name} 暂时没有新的公开动作。"
+        expression_input = ExpressionInput(
+            character_id=character.id,
+            display_name=character.display_name,
+            profile=character.profile,
+            emotion_state=character.emotion_state,
+            current_plan_summary=character.current_plan_summary,
+            social_drive=character.social_drive,
+            interrupt_threshold=character.interrupt_threshold,
+            action_type=decision.action_type,
+            decision_reason=decision.reason,
+            target_id=target_id or decision.target_id,
+            target_display_name=target_display_name,
+            recent_context=[
+                ExpressionRecentEvent(
+                    kind=event.kind,
+                    summary=event.summary,
+                    source_character_id=event.source_character_id,
+                    target_character_id=event.target_character_id,
+                    is_directed_at_character=event.is_directed_at_character,
+                )
+                for event in visible_context.recent_events
+            ],
+        )
+        expression = self.expression_generator.generate(expression_input=expression_input)
+        return expression.content
 
     async def _apply_relationship_updates(
         self,

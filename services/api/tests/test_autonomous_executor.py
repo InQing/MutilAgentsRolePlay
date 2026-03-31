@@ -77,3 +77,41 @@ def test_autonomous_executor_writes_group_message_for_scheduled_check_in() -> No
         event.kind.value == "action_executed"
         for event in runtime.get_recent_events(limit=10)
     )
+
+
+def test_autonomous_executor_generates_distinct_group_message_styles_for_different_characters() -> None:
+    runtime = WorldRuntimeService(
+        thinking_engine=StateDrivenThinkingEngine(),
+        default_speed_multiplier=60.0,
+    )
+    runtime.bootstrap_sample_world()
+    gateway = FakeSocialGateway()
+    executor = AutonomousActionExecutor(runtime=runtime, social_gateway=gateway)
+
+    tasks = [
+        RuntimeTask(
+            world_id=runtime.world_id,
+            task_type="character_plan_tick",
+            run_at=runtime.clock.snapshot().now,
+            payload={"character_id": "char-001", "intent": "check_group_chat"},
+            priority=1,
+        ),
+        RuntimeTask(
+            world_id=runtime.world_id,
+            task_type="character_plan_tick",
+            run_at=runtime.clock.snapshot().now,
+            payload={"character_id": "char-002", "intent": "check_group_chat"},
+            priority=1,
+        ),
+    ]
+
+    executions = asyncio.run(executor.execute_due_tasks(tasks=tasks))
+
+    assert len(executions) == 2
+    assert executions[0].message is not None
+    assert executions[1].message is not None
+    first_content = executions[0].message.content
+    second_content = executions[1].message.content
+    assert first_content != second_content
+    assert "群里" in first_content
+    assert "简短同步" in second_content

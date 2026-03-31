@@ -2,6 +2,7 @@ from app.agent_runtime.executor import AutonomousActionExecutor
 from app.agent_runtime.thinking.state_driven import StateDrivenThinkingEngine
 from app.core.config import get_settings
 from app.director.policies.member_director_hybrid import MemberDirectorHybridPolicy
+from app.expression.service import CharacterExpressionService
 from app.infra.cache.redis_client import RedisClientFactory
 from app.infra.db.session import DatabaseManager
 from app.relationship.service import RelationshipService
@@ -21,6 +22,11 @@ class RuntimeRegistry:
         )
         self.database = DatabaseManager(settings.database_url)
         self.redis = RedisClientFactory(settings.redis_url)
+        self.llm_client = None
+        self.llm_expression_service = None
+        self.expression_generator = CharacterExpressionService(
+            llm_expression_service=self.llm_expression_service
+        )
         self.world_runtime = WorldRuntimeService(
             thinking_engine=self.thinking_engine,
             default_speed_multiplier=settings.world_default_speed_multiplier,
@@ -43,6 +49,7 @@ class RuntimeRegistry:
         self.autonomous_executor = AutonomousActionExecutor(
             runtime=self.world_runtime,
             social_gateway=self.social_service,
+            expression_generator=self.expression_generator,
             relationship_service=self.relationship_service,
         )
         self.world_runtime.bootstrap_sample_world()

@@ -107,13 +107,17 @@
 - 2026-03-31：新增独立角色页 `/characters` 与前端同源代理，当前可在 Web 端管理显示名、角色画像、当前计划、情绪与社交参数，并支持新增 / 删除角色。
 - 2026-03-31：新增角色管理服务级与 API 级测试，覆盖角色编辑、持久化恢复、角色创建 / 删除及历史消息保留；本地轻量模式下后端测试扩展到 `34` 项，当前全部通过。
 - 2026-03-31：完成 `npm run typecheck:web` 与 `npm run build:web`，确认角色管理页面、代理路由与共享契约可正常通过前端类型检查和生产构建。
+- 2026-03-31：阶段四开始落地表达层抽象：新增独立 `expression` 模块，当前消息生成已从 `AutonomousActionExecutor` 中拆出，不再继续在 executor 内部堆硬模板。
+- 2026-03-31：表达层现已正式接入角色画像、emotion_state、current_plan_summary 与 recent context；同一动作在不同角色上的默认模板输出已能稳定拉开差异。
+- 2026-03-31：新增 `LLMExpressionService` 与 prompt/schema helper，先通过 `LLMClient` 建立 provider-agnostic 兼容边界；当前默认仍走模板 fallback，尚未接真实供应商。
+- 2026-03-31：新增表达层与 executor 回归测试，覆盖模板差异化输出、LLM fallback 行为与 executor 主链路回归；本地轻量模式下后端测试扩展到 `38` 项，当前全部通过。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 进入新的阶段四：抽离独立表达层，停止在 `AutonomousActionExecutor` 中继续堆文本模板
-  - 让表达层直接消费 `character` 域中的角色画像、emotion_state、current_plan_summary 与 recent context
-  - 在保持 runtime 主骨架不变的前提下，为后续 provider-agnostic 的 LLM 表达接入预留 mockable 结构
+  - 继续阶段四：在已有表达层与模板 fallback 基础上，补真实 provider 接入
+  - 保持 `LLMClient` 兼容边界不变，避免把表达层锁死到单一供应商
+  - 在不改 runtime 主骨架的前提下，继续提升角色表达质量与可测试性
 - 表达层稳定后，按以下顺序继续开发：
   - 继续细化导演延迟可见规则，并为导演页补前端交互回归检查
   - 把 Redis 真正接入事件队列与调度协作链路
