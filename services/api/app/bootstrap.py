@@ -5,6 +5,8 @@ from app.director.policies.member_director_hybrid import MemberDirectorHybridPol
 from app.expression.service import CharacterExpressionService
 from app.infra.cache.redis_client import RedisClientFactory
 from app.infra.db.session import DatabaseManager
+from app.llm.factory import build_llm_client
+from app.llm.expression_service import LLMExpressionService
 from app.relationship.service import RelationshipService
 from app.social.interaction_service import MomentInteractionService
 from app.social.service import SocialService
@@ -22,8 +24,12 @@ class RuntimeRegistry:
         )
         self.database = DatabaseManager(settings.database_url)
         self.redis = RedisClientFactory(settings.redis_url)
-        self.llm_client = None
-        self.llm_expression_service = None
+        self.llm_client = build_llm_client(settings=settings)
+        self.llm_expression_service = (
+            LLMExpressionService(self.llm_client)
+            if self.llm_client is not None
+            else None
+        )
         self.expression_generator = CharacterExpressionService(
             llm_expression_service=self.llm_expression_service
         )

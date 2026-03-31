@@ -26,6 +26,34 @@ packages/shared-contracts/ Shared TypeScript contracts
 - `WorkflowRunner`: future hook for LangGraph or other orchestration layers
 - `LLMClient`: future hook for model provider integrations
 
+## LLM expression configuration
+
+The backend expression layer now supports provider-agnostic runtime configuration through `LLMClient`.
+
+Available `MARP_LLM_PROVIDER` values:
+
+- `none`: disable real model calls and keep template fallback
+- `openai_compatible`: use an OpenAI-compatible `/chat/completions` endpoint
+- `gemini`: use Gemini `generateContent`
+
+Key environment variables:
+
+- `MARP_LLM_PROVIDER`
+- `MARP_LLM_MODEL`
+- `MARP_LLM_API_KEY`
+- `MARP_LLM_BASE_URL`
+- `MARP_LLM_TIMEOUT_SECONDS`
+
+Examples:
+
+- DeepSeek via OpenAI-compatible mode:
+  - `MARP_LLM_PROVIDER=openai_compatible`
+  - `MARP_LLM_MODEL=deepseek-chat`
+  - `MARP_LLM_BASE_URL=https://api.deepseek.com/v1`
+- Gemini:
+  - `MARP_LLM_PROVIDER=gemini`
+  - `MARP_LLM_MODEL=gemini-2.5-flash`
+
 ## Current runnable scope
 
 The project already supports a lightweight local flow where you can:

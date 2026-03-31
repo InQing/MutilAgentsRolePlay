@@ -111,13 +111,16 @@
 - 2026-03-31：表达层现已正式接入角色画像、emotion_state、current_plan_summary 与 recent context；同一动作在不同角色上的默认模板输出已能稳定拉开差异。
 - 2026-03-31：新增 `LLMExpressionService` 与 prompt/schema helper，先通过 `LLMClient` 建立 provider-agnostic 兼容边界；当前默认仍走模板 fallback，尚未接真实供应商。
 - 2026-03-31：新增表达层与 executor 回归测试，覆盖模板差异化输出、LLM fallback 行为与 executor 主链路回归；本地轻量模式下后端测试扩展到 `38` 项，当前全部通过。
+- 2026-03-31：继续完成阶段四中的 LLM 兼容接入：新增 `LLMClient` provider 工厂与两类真实 provider 通道，当前支持 `openai_compatible` 与 `gemini` 配置方式，便于后续接入 DeepSeek、Gemini 等模型。
+- 2026-03-31：新增 LLM provider 工厂与响应解析测试，覆盖 provider 选择、兼容接口消息提取与 Gemini 返回内容提取；本地轻量模式下后端测试扩展到 `43` 项，当前全部通过。
+- 2026-03-31：更新 `.env.example`，补充 LLM provider、model、api key、base url 与 timeout 配置入口，默认仍关闭真实模型调用并保留模板 fallback。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 继续阶段四：在已有表达层与模板 fallback 基础上，补真实 provider 接入
+  - 继续阶段四：基于已落地的 provider 通道，接入实际模型配置并验证真实输出质量
   - 保持 `LLMClient` 兼容边界不变，避免把表达层锁死到单一供应商
-  - 在不改 runtime 主骨架的前提下，继续提升角色表达质量与可测试性
+  - 在不改 runtime 主骨架的前提下，继续提升角色表达质量、prompt 管理与可测试性
 - 表达层稳定后，按以下顺序继续开发：
   - 继续细化导演延迟可见规则，并为导演页补前端交互回归检查
   - 把 Redis 真正接入事件队列与调度协作链路

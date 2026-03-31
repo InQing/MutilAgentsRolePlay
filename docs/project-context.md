@@ -671,7 +671,12 @@ MutilAgentsRolePlay/
 - 先把角色画像、情绪、当前计划和 recent context 正式接入表达输入
 - 先保证默认链路仍可预测、可测试
 
-当前默认表达实现仍然是模板 fallback，但它已经不再直接写在 executor 中。后续如果要接入真正角色表达生成，应继续沿表达层扩展，通过 `LLMClient` 接入，而不是改 runtime 主骨架。
+当前默认表达实现仍然是模板 fallback，但它已经不再直接写在 executor 中。当前 `LLMClient` 已新增 provider-agnostic 工厂与两类真实 provider 通道：
+
+- `openai_compatible`
+- `gemini`
+
+因此后续如果要接入真正角色表达生成，应继续沿表达层扩展，通过 `LLMClient` 配置具体 provider，而不是改 runtime 主骨架。
 
 当前表达层已经直接读取 `character` 域中的角色画像、当前计划、情绪和 recent context，不再在表达层内部临时定义 persona。
 

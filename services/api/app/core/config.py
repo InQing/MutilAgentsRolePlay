@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     scheduler_poll_seconds: int = 15
     world_default_speed_multiplier: float = 60.0
     db_auto_create_schema: bool = True
+    llm_provider: str = "none"
+    llm_model: str | None = None
+    llm_api_key: str | None = None
+    llm_base_url: str | None = None
+    llm_timeout_seconds: float = 20.0
 
     model_config = SettingsConfigDict(
         env_prefix="MARP_",
