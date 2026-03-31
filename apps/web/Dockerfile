@@ -40,4 +40,4 @@ COPY --from=builder /app/apps/web/.next ./apps/web/.next
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start:web", "--", "--hostname", "0.0.0.0", "--port", "3000"]
+CMD ["./node_modules/.bin/next", "start", "apps/web", "--hostname", "0.0.0.0", "--port", "3000"]

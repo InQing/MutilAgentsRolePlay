@@ -54,6 +54,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+如果镜像构建阶段需要走代理，请在 `.env` 中设置 `BUILD_HTTP_PROXY` / `BUILD_HTTPS_PROXY`。如果代理运行在宿主机本机，请写成 `http://host.docker.internal:7890`，不要写 `127.0.0.1`，因为构建容器里的 `127.0.0.1` 指向的是容器自己。
+
 查看状态：
 
 ```bash

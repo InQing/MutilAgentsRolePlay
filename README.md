@@ -48,8 +48,9 @@ The repository now includes a cloud-oriented `docker-compose.yml` for:
 For Ubuntu server deployment:
 
 1. Copy `.env.example` to `.env`
-2. Run `docker compose up -d --build`
-3. Open `/`, `/chat`, `/moments`, `/director` from the server domain or IP
+2. If image builds need a proxy, set `BUILD_HTTP_PROXY` / `BUILD_HTTPS_PROXY` in `.env`. For a host-local proxy, use `http://host.docker.internal:7890` instead of `127.0.0.1`.
+3. Run `docker compose up -d --build`
+4. Open `/`, `/chat`, `/moments`, `/director` from the server domain or IP
 
 Detailed instructions are in [docs/ubuntu-docker-deployment.md](docs/ubuntu-docker-deployment.md).
 
