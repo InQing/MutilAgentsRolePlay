@@ -29,6 +29,62 @@ def test_world_restart_preserves_messages_and_pending_tasks(client_factory) -> N
         assert restored_state["recent_events"] == recent_before_restart
 
 
+def test_world_restart_executes_restored_follow_up_task_without_replaying_completed_work(
+    client_factory,
+) -> None:
+    with client_factory(reset_db=True) as first_client:
+        first_advance = first_client.post("/api/world/advance", params={"seconds": 700})
+        assert first_advance.status_code == 200
+
+        state_before_restart = first_advance.json()
+        general_before_restart = first_client.get(
+            "/api/social/conversations/conv-general/messages"
+        )
+        assert general_before_restart.status_code == 200
+        general_before_restart_payload = general_before_restart.json()
+        assert len(general_before_restart_payload) == 1
+
+        moments_before_restart = first_client.get(
+            "/api/social/conversations/conv-moments/messages"
+        )
+        assert moments_before_restart.status_code == 200
+        assert moments_before_restart.json() == []
+
+    with client_factory(reset_db=False) as second_client:
+        restored_state = second_client.get("/api/world/state")
+        assert restored_state.status_code == 200
+        assert restored_state.json()["pending_tasks"] == state_before_restart["pending_tasks"]
+
+        second_advance = second_client.post("/api/world/advance", params={"seconds": 720})
+        assert second_advance.status_code == 200
+        second_advance_payload = second_advance.json()
+
+        general_after_restart = second_client.get(
+            "/api/social/conversations/conv-general/messages"
+        )
+        assert general_after_restart.status_code == 200
+        assert general_after_restart.json() == general_before_restart_payload
+
+        moments_after_restart = second_client.get(
+            "/api/social/conversations/conv-moments/messages"
+        )
+        assert moments_after_restart.status_code == 200
+        moments_after_restart_payload = moments_after_restart.json()
+
+        assert len(moments_after_restart_payload) == 1
+        assert moments_after_restart_payload[0]["conversation_id"] == "conv-moments"
+        assert moments_after_restart_payload[0]["sender_id"] == "char-001"
+        assert len(second_advance_payload["pending_tasks"]) >= 2
+        assert any(
+            "action_executed" in item or "wrote a new message" in item
+            for item in second_advance_payload["recent_events"]
+        )
+        assert any(
+            "action_skipped" in item or "skipped acting" in item
+            for item in second_advance_payload["recent_events"]
+        )
+
+
 def test_multiple_advances_keep_autonomous_loop_stable(client: TestClient) -> None:
     first = client.post("/api/world/advance", params={"seconds": 700})
     assert first.status_code == 200

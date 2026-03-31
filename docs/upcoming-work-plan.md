@@ -26,12 +26,14 @@
 - 社交消息持久化基础
 - 第一版自治动作执行链路
 - 轻量本地测试环境
-- 17 项后端测试基线
+- 20 项后端测试基线
 - Ubuntu 云服务器上的 Docker 常驻部署与第一轮手工 smoke check
+- Docker/PostgreSQL/Redis 正式一致性联调
+- follow-up task 恢复一致性测试
+- 自治消息 API 可见性联调
 
 当前项目尚未完成：
 
-- Docker/PostgreSQL/Redis 真实联调
 - 计划系统闭环
 - 朋友圈互动
 - 导演模式的延迟可见规则与控制能力
@@ -40,8 +42,8 @@
 
 因此，后续工作不应再回到“搭骨架”，而应围绕三条主线推进：
 
-1. 先补齐 Docker/PostgreSQL/Redis 环境下的一致性验证
-2. 再补齐缺失领域能力与导演规则
+1. 先补齐 relationship / plan / moment interaction 的领域闭环
+2. 再推进导演规则与控制能力
 3. 最后升级表达层与基础设施深化
 
 ## 3. 执行总原则
@@ -113,7 +115,7 @@
 
 ## 5. 阶段一：环境与一致性验证
 
-这是当前阶段的第一优先级。
+该阶段已完成。
 
 ### 5.1 目标
 
@@ -125,7 +127,7 @@
 
 内容：
 
-- 在具备 Docker 的机器上运行 `scripts/integration/run-docker-consistency-check.ps1`
+- 在具备 Docker 的机器上运行 `scripts/integration/run-docker-consistency-check.ps1` 或 `scripts/integration/run-docker-consistency-check.sh`
 - 启动 PostgreSQL 和 Redis
 - 用 API 实际跑 world advance 与 social 读写
 - 对比 SQLite 模式下的结果是否一致
@@ -141,7 +143,7 @@
 
 阻塞条件：
 
-- 需要在现有 Ubuntu 服务器环境上完成正式验证脚本与结果记录
+- 当前已解除，Ubuntu 环境上的正式验证脚本与结果记录已完成
 
 建议执行环境：
 
@@ -180,6 +182,10 @@
 - Docker/PostgreSQL/Redis 联调完成，或明确记录了环境外部阻塞
 - follow-up task 恢复一致性测试完成
 - 自治消息 API 可见性联调完成
+
+当前状态：
+
+- 已完成
 
 ## 6. 阶段二：持久化与领域补全
 
@@ -369,10 +375,10 @@
 
 如果现在立刻继续开发，建议按以下顺序执行：
 
-1. 在现有 Ubuntu Docker 环境上完成正式的 world/social 一致性联调记录
-2. 为 follow-up task 增加恢复后继续执行的联调测试
-3. 为自治消息增加“写入后可读”的更长链路测试
-4. 然后开始 plan 持久化与 relationship 规则补强
+1. 先补 relationship 规则与测试，让行动后的关系变化更稳定且可解释
+2. 再做 plan 持久化，把“任务 payload”提升为可恢复、可观察的计划对象
+3. 然后补齐 moment comment / like 最小闭环及对应事件记录
+4. 阶段二稳定后，再进入导演模式的延迟可见规则与控制能力
 
 ## 11. 暂不建议做的事情
 

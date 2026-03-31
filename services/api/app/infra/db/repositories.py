@@ -478,7 +478,7 @@ class AsyncRelationshipRepository:
             )
             self.session.add(record)
 
-        record.affinity = max(-1.0, min(1.0, record.affinity + delta))
+        record.affinity = round(max(-1.0, min(1.0, record.affinity + delta)), 4)
         record.updated_at = updated_at
         if label and label not in record.labels:
             record.labels = [*record.labels[-2:], label]

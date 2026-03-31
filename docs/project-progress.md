@@ -2,8 +2,8 @@
 
 ## 当前阶段
 
-- 阶段：基本可运行状态已完成，已进入 Docker 环境联调与一致性验证阶段
-- 概要：当前项目已具备最小可用 Web 闭环：首页可读取真实 world state 并推进世界，群聊页与朋友圈页可真实读写，导演页可读取真实聚合数据。Ubuntu 云服务器上的 Docker 常驻部署已完成基础手工 smoke check，前端页面、world advance、群聊、朋友圈、导演页与容器日志均已初步验证可用，但正式的一致性测试与自动化验证仍未补齐。
+- 阶段：环境与一致性验证已完成，已进入 relationship / plan / moment interaction 的领域补全阶段
+- 概要：当前项目已具备最小可用 Web 闭环、自治主链路与云端 Docker 常驻部署能力。阶段一所需的 PostgreSQL/Redis 一致性联调、follow-up task 恢复一致性测试、自治消息 API 可见性联调已补齐并完成验证，当前开发重点已切换到更完整的世界状态模型与交互能力补全。
 
 ## 最近变更
 
@@ -72,16 +72,22 @@
 - 2026-03-26：将 `docker-compose.yml` 调整为云服务器常驻部署版本，新增 `web` 服务、前端 Dockerfile、`.dockerignore` 与 Ubuntu 部署说明文档，服务间默认走容器内网络。
 - 2026-03-31：用户已完成 Docker 环境安装并在 Ubuntu 云服务器上启动常驻容器，当前 Web、API、PostgreSQL、Redis 组合已可访问。
 - 2026-03-31：云端手工联调已完成第一轮 smoke check：首页真实 world state、前端推进世界、群聊读写、朋友圈读写、导演页真实数据与基础容器日志检查均已确认可用。
+- 2026-03-31：新增 follow-up task 恢复后继续执行测试，覆盖“advance -> 续排 -> 持久化 -> 重启 -> 再次 advance”完整链路，并验证已完成任务不会在恢复后重复执行。
+- 2026-03-31：新增自治群聊 / 私聊 / 朋友圈消息 API 可见性测试，验证自治写入结果可通过现有 social conversation API 读回，且私聊会话会被稳定复用。
+- 2026-03-31：本地轻量模式下后端测试扩展到 `20` 项，当前全部通过。
+- 2026-03-31：新增 Linux 版 `scripts/integration/run-docker-consistency-check.sh`，用于在 Ubuntu 环境下执行 Docker / PostgreSQL / Redis 一致性检查。
+- 2026-03-31：定位并修复 Docker 一致性脚本在宿主机本地代理环境下对 `127.0.0.1:8000` 误走代理导致的 `502 Bad Gateway` 问题，当前脚本会显式绕过本地代理访问 API。
+- 2026-03-31：在当前 Linux Docker 环境上完成正式的一致性联调：world state、world advance、群聊、私聊、朋友圈 API 与默认会话读写检查均已跑通并留存日志与 JSON 产物至 `.codex-tmp`。
+- 2026-03-31：将 relationship 更新逻辑重构为显式交互规则表，补充 `moment_comment` / `moment_like` 预留规则，并在仓储层加入 affinity 小数收束，避免多次累加后的浮点误差污染持久化结果。
+- 2026-03-31：新增 `RelationshipService` 服务级测试，覆盖默认关系边创建、双向关系增量与 affinity 上限钳制；本地轻量模式下后端测试扩展到 `23` 项，当前全部通过。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 在现有 Ubuntu Docker 环境上补做正式的 PostgreSQL/Redis 一致性联调
-  - 增加 follow-up task 落库与恢复一致性测试
-  - 增加自治生成消息后 API 可见性的联调测试
-- 一致性验证后，按以下顺序继续开发：
-  - 完善 relationship 规则与 plan 持久化
-  - 补齐私聊可视化页面与更完整的朋友圈互动能力
+  - 推进 plan 持久化，把当前调度任务提升为“计划对象 + 调度任务”的组合
+  - 补齐朋友圈 comment / like 最小闭环及对应事件记录
+  - 继续把 relationship 规则接入更多交互场景，并让导演面板与后续决策逻辑更稳定消费这些关系数据
+- 领域补全后，按以下顺序继续开发：
   - 继续补强导演模式的延迟可见规则与控制能力
   - 将当前模板化消息表达升级为更完整的角色表达生成逻辑
   - 把 Redis 真正接入事件队列与调度协作链路

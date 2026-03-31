@@ -1,9 +1,17 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.character.models import CharacterState
 from app.infra.db.repositories import AsyncRelationshipRepository
 from app.infra.db.session import DatabaseManager
 from app.relationship.models import RelationshipSnapshot
+
+
+@dataclass(frozen=True)
+class RelationshipInteractionRule:
+    source_delta: float
+    reciprocal_delta: float
+    label: str
 
 
 class RelationshipService:
@@ -42,7 +50,7 @@ class RelationshipService:
         if not unique_target_ids:
             return []
 
-        delta, label = self._resolve_interaction_rules(interaction_kind)
+        rule = self._resolve_interaction_rule(interaction_kind)
         updated_at = datetime.now(timezone.utc)
         updated_relationships: list[RelationshipSnapshot] = []
 
@@ -55,8 +63,8 @@ class RelationshipService:
                             world_id=self.world_id,
                             source_character_id=source_character_id,
                             target_character_id=target_id,
-                            delta=delta,
-                            label=label,
+                            delta=rule.source_delta,
+                            label=rule.label,
                             updated_at=updated_at,
                         )
                     )
@@ -65,19 +73,47 @@ class RelationshipService:
                             world_id=self.world_id,
                             source_character_id=target_id,
                             target_character_id=source_character_id,
-                            delta=delta / 2,
-                            label=label,
+                            delta=rule.reciprocal_delta,
+                            label=rule.label,
                             updated_at=updated_at,
                         )
                     )
 
         return updated_relationships
 
-    def _resolve_interaction_rules(self, interaction_kind: str) -> tuple[float, str]:
-        if interaction_kind == "private_message":
-            return 0.08, "recent_private_contact"
-        if interaction_kind == "group_message":
-            return 0.03, "recent_group_contact"
-        if interaction_kind == "moment_post":
-            return 0.02, "recent_moment_activity"
-        return 0.01, "recent_social_activity"
+    def _resolve_interaction_rule(self, interaction_kind: str) -> RelationshipInteractionRule:
+        rules = {
+            "private_message": RelationshipInteractionRule(
+                source_delta=0.08,
+                reciprocal_delta=0.04,
+                label="recent_private_contact",
+            ),
+            "group_message": RelationshipInteractionRule(
+                source_delta=0.03,
+                reciprocal_delta=0.015,
+                label="recent_group_contact",
+            ),
+            "moment_post": RelationshipInteractionRule(
+                source_delta=0.02,
+                reciprocal_delta=0.01,
+                label="recent_moment_activity",
+            ),
+            "moment_comment": RelationshipInteractionRule(
+                source_delta=0.05,
+                reciprocal_delta=0.025,
+                label="recent_moment_reply",
+            ),
+            "moment_like": RelationshipInteractionRule(
+                source_delta=0.015,
+                reciprocal_delta=0.008,
+                label="recent_moment_reaction",
+            ),
+        }
+        return rules.get(
+            interaction_kind,
+            RelationshipInteractionRule(
+                source_delta=0.01,
+                reciprocal_delta=0.005,
+                label="recent_social_activity",
+            ),
+        )
