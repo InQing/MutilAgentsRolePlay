@@ -80,6 +80,38 @@ class ChatMessageRecord(Base):
     mentions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
+class PlanRecord(Base):
+    __tablename__ = "plans"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    character_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+
+class MomentInteractionRecord(Base):
+    __tablename__ = "moment_interactions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    moment_message_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("chat_messages.id"),
+        nullable=False,
+        index=True,
+    )
+    interaction_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    sender_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+
 class RelationshipRecord(Base):
     __tablename__ = "relationships"
     __table_args__ = (

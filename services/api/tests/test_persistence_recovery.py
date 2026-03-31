@@ -31,6 +31,7 @@ def test_world_persistence_can_restore_clock_events_and_pending_tasks(
         due_tasks, _ = runtime.advance(seconds=700)
         await executor.execute_due_tasks(tasks=due_tasks)
         await persistence.persist_runtime(runtime)
+        persisted_plans = runtime.list_plans()
 
         restored_runtime = WorldRuntimeService(
             thinking_engine=StateDrivenThinkingEngine(),
@@ -45,8 +46,16 @@ def test_world_persistence_can_restore_clock_events_and_pending_tasks(
         assert any("action_executed" in item or "wrote a new message" in item for item in restored_state.recent_events)
         assert len(restored_state.pending_tasks) >= 1
         assert len(restored_state.active_characters) == 2
+        restored_plans = restored_runtime.list_plans()
+        assert len(restored_plans) == len(persisted_plans)
+        assert all(plan.status == "active" for plan in restored_plans)
+        assert all(task.payload.get("plan_id") for task in restored_runtime.get_pending_tasks())
+
+        restored_plan_lookup = {plan.id: plan for plan in restored_plans}
+        for task in restored_runtime.get_pending_tasks():
+            assert task.payload["plan_id"] in restored_plan_lookup
+            assert task.payload["intent"] == restored_plan_lookup[task.payload["plan_id"]].intent
 
         await database.engine.dispose()
 
     asyncio.run(scenario())
-

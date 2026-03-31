@@ -10,13 +10,23 @@ from app.infra.db.models import (
     CharacterRecord,
     ChatMessageRecord,
     ConversationRecord,
+    MomentInteractionRecord as MomentInteractionOrmRecord,
+    PlanRecord,
     RelationshipRecord,
     ScheduledTaskRecord,
     WorldEventRecord,
     WorldRecord,
 )
+from app.plan.models import PlanItem, PlanStatus
 from app.relationship.models import RelationshipSnapshot
-from app.social.models import ConversationSummary, ConversationType, CreateMessageRequest, MessageRecord
+from app.social.models import (
+    ConversationSummary,
+    ConversationType,
+    CreateMessageRequest,
+    CreateMomentInteractionRequest,
+    MessageRecord,
+    MomentInteractionRecord,
+)
 from app.world.models import ClockState
 from app.world.events import RuntimeTask, WorldEvent
 
@@ -68,6 +78,31 @@ class SchedulerRepository:
 
     def replace_all(self, tasks: Sequence[RuntimeTask]) -> None:
         self._tasks = {task.id: task for task in tasks}
+
+
+class PlanRepository:
+    def __init__(self) -> None:
+        self._plans: dict[str, PlanItem] = {}
+
+    def save(self, plan: PlanItem) -> None:
+        self._plans[plan.id] = plan
+
+    def list_all(self) -> list[PlanItem]:
+        return sorted(self._plans.values(), key=lambda item: (item.next_run_at, item.priority))
+
+    def get(self, plan_id: str | None) -> PlanItem | None:
+        if plan_id is None:
+            return None
+        return self._plans.get(plan_id)
+
+    def get_active_for_character(self, *, character_id: str) -> PlanItem | None:
+        for plan in self.list_all():
+            if plan.character_id == character_id and plan.status == PlanStatus.ACTIVE:
+                return plan
+        return None
+
+    def replace_all(self, plans: Sequence[PlanItem]) -> None:
+        self._plans = {plan.id: plan for plan in plans}
 
 
 class AsyncWorldRepository:
@@ -247,6 +282,57 @@ class AsyncSchedulerRepository:
         ]
 
 
+class AsyncPlanRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def replace_for_world(
+        self,
+        *,
+        world_id: str,
+        plans: Sequence[PlanItem],
+    ) -> None:
+        await self.session.execute(delete(PlanRecord).where(PlanRecord.world_id == world_id))
+        self.session.add_all(
+            [
+                PlanRecord(
+                    id=plan.id,
+                    world_id=world_id,
+                    character_id=plan.character_id,
+                    summary=plan.summary,
+                    intent=plan.intent,
+                    next_run_at=plan.next_run_at,
+                    priority=plan.priority,
+                    status=plan.status.value,
+                    created_at=plan.created_at,
+                    updated_at=plan.updated_at,
+                )
+                for plan in plans
+            ]
+        )
+
+    async def list_for_world(self, *, world_id: str) -> list[PlanItem]:
+        result = await self.session.execute(
+            select(PlanRecord)
+            .where(PlanRecord.world_id == world_id)
+            .order_by(PlanRecord.next_run_at.asc(), PlanRecord.priority.asc())
+        )
+        return [
+            PlanItem(
+                id=record.id,
+                character_id=record.character_id,
+                summary=record.summary,
+                intent=record.intent,
+                next_run_at=record.next_run_at,
+                priority=record.priority,
+                status=record.status,
+                created_at=record.created_at,
+                updated_at=record.updated_at,
+            )
+            for record in result.scalars().all()
+        ]
+
+
 class AsyncConversationRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -356,6 +442,21 @@ class AsyncMessageRepository:
             for record in result.scalars().all()
         ]
 
+    async def get_by_id(self, *, message_id: str) -> MessageRecord | None:
+        record = await self.session.get(ChatMessageRecord, message_id)
+        if record is None:
+            return None
+        return MessageRecord(
+            id=record.id,
+            conversation_id=record.conversation_id,
+            conversation_type=record.conversation_type,
+            sender_id=record.sender_id,
+            content=record.content,
+            created_at=record.created_at,
+            target_id=record.target_id,
+            mentions=record.mentions,
+        )
+
     async def create_for_world(
         self,
         *,
@@ -384,6 +485,83 @@ class AsyncMessageRepository:
         )
         self.session.add(record)
         return message
+
+
+class AsyncMomentInteractionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def list_for_moment(self, *, moment_message_id: str) -> list[MomentInteractionRecord]:
+        result = await self.session.execute(
+            select(MomentInteractionOrmRecord)
+            .where(MomentInteractionOrmRecord.moment_message_id == moment_message_id)
+            .order_by(
+                MomentInteractionOrmRecord.created_at.asc(),
+                MomentInteractionOrmRecord.id.asc(),
+            )
+        )
+        return [
+            MomentInteractionRecord(
+                id=record.id,
+                moment_message_id=record.moment_message_id,
+                interaction_type=record.interaction_type,
+                sender_id=record.sender_id,
+                content=record.content,
+                created_at=record.created_at,
+            )
+            for record in result.scalars().all()
+        ]
+
+    async def find_for_moment_sender_and_type(
+        self,
+        *,
+        moment_message_id: str,
+        sender_id: str,
+        interaction_type: str,
+    ) -> MomentInteractionRecord | None:
+        result = await self.session.execute(
+            select(MomentInteractionOrmRecord).where(
+                MomentInteractionOrmRecord.moment_message_id == moment_message_id,
+                MomentInteractionOrmRecord.sender_id == sender_id,
+                MomentInteractionOrmRecord.interaction_type == interaction_type,
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+        return MomentInteractionRecord(
+            id=record.id,
+            moment_message_id=record.moment_message_id,
+            interaction_type=record.interaction_type,
+            sender_id=record.sender_id,
+            content=record.content,
+            created_at=record.created_at,
+        )
+
+    async def create_for_world(
+        self,
+        *,
+        world_id: str,
+        request: CreateMomentInteractionRequest,
+    ) -> MomentInteractionRecord:
+        interaction = MomentInteractionRecord(
+            moment_message_id=request.moment_message_id,
+            interaction_type=request.interaction_type,
+            sender_id=request.sender_id,
+            content=request.content,
+            created_at=request.created_at,
+        )
+        record = MomentInteractionOrmRecord(
+            id=interaction.id,
+            world_id=world_id,
+            moment_message_id=interaction.moment_message_id,
+            interaction_type=interaction.interaction_type,
+            sender_id=interaction.sender_id,
+            content=interaction.content,
+            created_at=interaction.created_at,
+        )
+        self.session.add(record)
+        return interaction
 
 
 class AsyncRelationshipRepository:

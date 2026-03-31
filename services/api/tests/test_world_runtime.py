@@ -11,9 +11,13 @@ def test_world_runtime_bootstrap_contains_characters_and_tasks() -> None:
 
     runtime.bootstrap_sample_world()
     state = runtime.get_world_state()
+    pending_tasks = runtime.get_pending_tasks()
+    plans = runtime.list_plans()
 
     assert len(state.active_characters) == 2
     assert len(state.pending_tasks) == 2
+    assert len(plans) == 2
+    assert all(task.payload.get("plan_id") for task in pending_tasks)
     assert "World runtime bootstrapped" in state.recent_events[-1]
 
 
@@ -54,6 +58,7 @@ def test_world_runtime_can_replace_persisted_state() -> None:
     runtime.replace_runtime_state(
         clock_state=runtime.clock.snapshot(),
         characters=runtime.character_repository.list_all()[:1],
+        plans=runtime.list_plans()[:1],
         tasks=[],
         events=original_events[:1],
     )

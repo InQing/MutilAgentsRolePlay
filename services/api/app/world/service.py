@@ -5,9 +5,11 @@ from app.agent_runtime.types import ActionDecision, ActionType, VisibleContext, 
 from app.character.models import CharacterState
 from app.infra.db.repositories import (
     CharacterRepository,
+    PlanRepository,
     SchedulerRepository,
     WorldEventRepository,
 )
+from app.plan.models import PlanItem
 from app.world.clock import WorldClock
 from app.world.event_bus import WorldEventBus
 from app.world.events import RuntimeTask, WorldEvent, WorldEventKind
@@ -27,6 +29,7 @@ class WorldRuntimeService:
         self.event_bus = WorldEventBus()
         self.scheduler = WorldScheduler()
         self.character_repository = CharacterRepository()
+        self.plan_repository = PlanRepository()
         self.event_repository = WorldEventRepository()
         self.scheduler_repository = SchedulerRepository()
         self.world_id = "local-prototype"
@@ -57,23 +60,25 @@ class WorldRuntimeService:
         self.character_repository.save_many(characters)
 
         now = datetime.now(timezone.utc)
-        tasks = [
-            RuntimeTask(
-                world_id=self.world_id,
-                task_type="character_plan_tick",
-                run_at=now + timedelta(minutes=10),
-                payload={"character_id": "char-001", "intent": "check_group_chat"},
+        plans = [
+            PlanItem(
+                character_id="char-001",
+                summary=characters[0].current_plan_summary,
+                intent="check_group_chat",
+                next_run_at=now + timedelta(minutes=10),
                 priority=1,
             ),
-            RuntimeTask(
-                world_id=self.world_id,
-                task_type="character_plan_tick",
-                run_at=now + timedelta(minutes=18),
-                payload={"character_id": "char-002", "intent": "stay_on_task"},
+            PlanItem(
+                character_id="char-002",
+                summary=characters[1].current_plan_summary,
+                intent="stay_on_task",
+                next_run_at=now + timedelta(minutes=18),
                 priority=2,
             ),
         ]
-        for task in tasks:
+        for plan in plans:
+            self.plan_repository.save(plan)
+            task = self._build_task_from_plan(plan)
             self.scheduler.schedule(task)
             self.scheduler_repository.save(task)
 
@@ -126,6 +131,9 @@ class WorldRuntimeService:
     def list_characters(self) -> list[CharacterState]:
         return self.character_repository.list_all()
 
+    def list_plans(self) -> list[PlanItem]:
+        return self.plan_repository.list_all()
+
     def get_pending_tasks(self) -> list[RuntimeTask]:
         return self.scheduler.snapshot()
 
@@ -142,6 +150,9 @@ class WorldRuntimeService:
             if character.id != exclude_id:
                 return character.id
         return None
+
+    def get_plan(self, plan_id: str | None) -> PlanItem | None:
+        return self.plan_repository.get(plan_id)
 
     def build_visible_context(
         self,
@@ -162,7 +173,7 @@ class WorldRuntimeService:
         return VisibleContext(
             character_id=character.id,
             current_plan_summary=character.current_plan_summary,
-            task_intent=task.payload.get("intent"),
+            task_intent=task.payload.get("intent") or self._resolve_task_intent(task),
             recent_events=recent_visible_events,
         )
 
@@ -194,13 +205,32 @@ class WorldRuntimeService:
             intent = "check_group_chat" if character.social_drive >= 0.6 else "stay_on_task"
             delay_minutes = 18
 
-        next_task = RuntimeTask(
-            world_id=self.world_id,
-            task_type="character_plan_tick",
-            run_at=self.clock.snapshot().now + timedelta(minutes=delay_minutes),
-            payload={"character_id": character.id, "intent": intent},
-            priority=1,
-        )
+        next_run_at = self.clock.snapshot().now + timedelta(minutes=delay_minutes)
+        existing_plan = self.plan_repository.get_active_for_character(character_id=character.id)
+        if existing_plan is None:
+            plan = PlanItem(
+                character_id=character.id,
+                summary=character.current_plan_summary,
+                intent=intent,
+                next_run_at=next_run_at,
+                priority=1,
+            )
+        else:
+            plan = existing_plan.model_copy(
+                update={
+                    "summary": character.current_plan_summary,
+                    "intent": intent,
+                    "next_run_at": next_run_at,
+                    "priority": 1,
+                    "updated_at": self.clock.snapshot().now,
+                }
+            )
+            removed_tasks = self.scheduler.remove_for_plan(plan_id=plan.id)
+            for task in removed_tasks:
+                self.scheduler_repository.remove(task.id)
+
+        self.plan_repository.save(plan)
+        next_task = self._build_task_from_plan(plan)
         self.scheduler.schedule(next_task)
         self.scheduler_repository.save(next_task)
         return next_task
@@ -210,11 +240,13 @@ class WorldRuntimeService:
         *,
         clock_state,
         characters: list[CharacterState],
+        plans: list[PlanItem],
         tasks: list[RuntimeTask],
         events: list[WorldEvent],
     ) -> None:
         self.clock.load_snapshot(clock_state)
         self.character_repository.replace_all(characters)
+        self.plan_repository.replace_all(plans)
         self.scheduler.replace(tasks)
         self.scheduler_repository.replace_all(tasks)
         self.event_bus.replace_history(events)
@@ -222,3 +254,22 @@ class WorldRuntimeService:
         self._next_event_sequence = (
             max((event.sequence_number for event in events), default=0) + 1
         )
+
+    def _build_task_from_plan(self, plan: PlanItem) -> RuntimeTask:
+        return RuntimeTask(
+            world_id=self.world_id,
+            task_type="character_plan_tick",
+            run_at=plan.next_run_at,
+            payload={
+                "character_id": plan.character_id,
+                "intent": plan.intent,
+                "plan_id": plan.id,
+            },
+            priority=plan.priority,
+        )
+
+    def _resolve_task_intent(self, task: RuntimeTask) -> str | None:
+        plan = self.get_plan(task.payload.get("plan_id"))
+        if plan is None:
+            return None
+        return plan.intent

@@ -129,6 +129,55 @@ def test_social_moment_api_writes_to_default_moment_conversation(
     assert listed_payload[0]["content"] == "今天先发一条朋友圈试试"
 
 
+def test_social_moment_interaction_api_creates_comment_like_and_records_events(
+    client: TestClient,
+) -> None:
+    created_moment = client.post(
+        "/api/social/moments",
+        json={
+            "sender_id": "char-001",
+            "content": "给后续互动留一条入口",
+        },
+    )
+    assert created_moment.status_code == 200
+    moment_payload = created_moment.json()
+
+    comment = client.post(
+        f"/api/social/moments/{moment_payload['id']}/comments",
+        json={
+            "sender_id": "char-002",
+            "content": "这条我先评论一下",
+        },
+    )
+    assert comment.status_code == 200
+    comment_payload = comment.json()
+    assert comment_payload["interaction_type"] == "comment"
+
+    first_like = client.post(
+        f"/api/social/moments/{moment_payload['id']}/likes",
+        json={"sender_id": "char-002"},
+    )
+    assert first_like.status_code == 200
+    second_like = client.post(
+        f"/api/social/moments/{moment_payload['id']}/likes",
+        json={"sender_id": "char-002"},
+    )
+    assert second_like.status_code == 200
+    assert second_like.json()["id"] == first_like.json()["id"]
+
+    interactions = client.get(f"/api/social/moments/{moment_payload['id']}/interactions")
+    assert interactions.status_code == 200
+    interactions_payload = interactions.json()
+    assert len(interactions_payload) == 2
+    assert [item["interaction_type"] for item in interactions_payload] == ["comment", "like"]
+
+    world_state = client.get("/api/world/state")
+    assert world_state.status_code == 200
+    recent_events = world_state.json()["recent_events"]
+    assert any("recorded a comment" in item for item in recent_events)
+    assert any("recorded a like" in item for item in recent_events)
+
+
 def test_autonomous_group_and_moment_messages_are_visible_via_social_api(
     client: TestClient,
 ) -> None:

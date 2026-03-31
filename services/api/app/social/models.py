@@ -11,6 +11,11 @@ class ConversationType(str, Enum):
     MOMENT = "moment"
 
 
+class MomentInteractionType(str, Enum):
+    COMMENT = "comment"
+    LIKE = "like"
+
+
 class MessageRecord(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
     conversation_id: str
@@ -75,3 +80,49 @@ class CreateMomentRequest(BaseModel):
         if not normalized:
             raise ValueError("content must not be empty")
         return normalized
+
+
+class MomentInteractionRecord(BaseModel):
+    id: str = Field(default_factory=lambda: uuid4().hex)
+    moment_message_id: str
+    interaction_type: MomentInteractionType
+    sender_id: str
+    content: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class CreateMomentInteractionRequest(BaseModel):
+    moment_message_id: str
+    interaction_type: MomentInteractionType
+    sender_id: str
+    content: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("content")
+    @classmethod
+    def validate_optional_content(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("content must not be empty")
+        return normalized
+
+
+class CreateMomentCommentRequest(BaseModel):
+    sender_id: str
+    content: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("content must not be empty")
+        return normalized
+
+
+class CreateMomentLikeRequest(BaseModel):
+    sender_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

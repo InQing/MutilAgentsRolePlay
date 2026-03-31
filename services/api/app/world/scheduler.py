@@ -19,6 +19,15 @@ class WorldScheduler:
         due_tasks = [self._tasks.pop(task_id) for task_id in due_ids]
         return sorted(due_tasks, key=lambda task: (task.run_at, task.priority))
 
+    def remove_for_plan(self, *, plan_id: str) -> list[RuntimeTask]:
+        matching_ids = [
+            task_id
+            for task_id, task in self._tasks.items()
+            if task.payload.get("plan_id") == plan_id
+        ]
+        removed_tasks = [self._tasks.pop(task_id) for task_id in matching_ids]
+        return sorted(removed_tasks, key=lambda task: (task.run_at, task.priority))
+
     def snapshot(self) -> list[RuntimeTask]:
         return sorted(self._tasks.values(), key=lambda task: (task.run_at, task.priority))
 

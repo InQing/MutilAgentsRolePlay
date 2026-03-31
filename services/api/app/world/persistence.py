@@ -1,6 +1,7 @@
 from app.infra.db.repositories import (
     AsyncCharacterRepository,
     AsyncConversationRepository,
+    AsyncPlanRepository,
     AsyncSchedulerRepository,
     AsyncWorldEventRepository,
     AsyncWorldRepository,
@@ -18,6 +19,7 @@ class WorldPersistenceService:
             world_repo = AsyncWorldRepository(session)
             character_repo = AsyncCharacterRepository(session)
             event_repo = AsyncWorldEventRepository(session)
+            plan_repo = AsyncPlanRepository(session)
             scheduler_repo = AsyncSchedulerRepository(session)
             conversation_repo = AsyncConversationRepository(session)
 
@@ -27,11 +29,13 @@ class WorldPersistenceService:
                 return
 
             characters = await character_repo.list_for_world(world_id=runtime.world_id)
+            plans = await plan_repo.list_for_world(world_id=runtime.world_id)
             tasks = await scheduler_repo.list_for_world(world_id=runtime.world_id)
             events = await event_repo.list_recent_for_world(world_id=runtime.world_id, limit=20)
             runtime.replace_runtime_state(
                 clock_state=clock_state,
                 characters=characters,
+                plans=plans,
                 tasks=tasks,
                 events=events,
             )
@@ -44,6 +48,7 @@ class WorldPersistenceService:
                 world_repo = AsyncWorldRepository(session)
                 character_repo = AsyncCharacterRepository(session)
                 event_repo = AsyncWorldEventRepository(session)
+                plan_repo = AsyncPlanRepository(session)
                 scheduler_repo = AsyncSchedulerRepository(session)
                 conversation_repo = AsyncConversationRepository(session)
 
@@ -54,6 +59,10 @@ class WorldPersistenceService:
                 await character_repo.replace_for_world(
                     world_id=runtime.world_id,
                     characters=runtime.character_repository.list_all(),
+                )
+                await plan_repo.replace_for_world(
+                    world_id=runtime.world_id,
+                    plans=runtime.list_plans(),
                 )
                 await scheduler_repo.replace_for_world(
                     world_id=runtime.world_id,

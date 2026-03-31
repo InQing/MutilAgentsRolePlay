@@ -5,6 +5,7 @@ from app.director.policies.member_director_hybrid import MemberDirectorHybridPol
 from app.infra.cache.redis_client import RedisClientFactory
 from app.infra.db.session import DatabaseManager
 from app.relationship.service import RelationshipService
+from app.social.interaction_service import MomentInteractionService
 from app.social.service import SocialService
 from app.world.persistence import WorldPersistenceService
 from app.world.service import WorldRuntimeService
@@ -32,6 +33,12 @@ class RuntimeRegistry:
         self.relationship_service = RelationshipService(
             self.database,
             world_id=self.world_runtime.world_id,
+        )
+        self.moment_interaction_service = MomentInteractionService(
+            social_service=self.social_service,
+            relationship_service=self.relationship_service,
+            world_runtime=self.world_runtime,
+            world_persistence=self.world_persistence,
         )
         self.autonomous_executor = AutonomousActionExecutor(
             runtime=self.world_runtime,

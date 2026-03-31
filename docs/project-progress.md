@@ -2,8 +2,8 @@
 
 ## 当前阶段
 
-- 阶段：环境与一致性验证已完成，已进入 relationship / plan / moment interaction 的领域补全阶段
-- 概要：当前项目已具备最小可用 Web 闭环、自治主链路与云端 Docker 常驻部署能力。阶段一所需的 PostgreSQL/Redis 一致性联调、follow-up task 恢复一致性测试、自治消息 API 可见性联调已补齐并完成验证，当前开发重点已切换到更完整的世界状态模型与交互能力补全。
+- 阶段：relationship / plan / moment interaction 的最小领域闭环已完成，下一阶段进入导演能力落地
+- 概要：当前项目已具备最小可用 Web 闭环、自治主链路、云端 Docker 常驻部署能力，以及阶段二所需的 relationship 规则补强、plan 持久化、moment interaction 最小后端闭环。当前后端已从“只有任务和消息”进入“计划、关系、互动都有最小持久化表达”的状态，下一步可转向导演模式的延迟可见规则与控制能力。
 
 ## 最近变更
 
@@ -80,15 +80,20 @@
 - 2026-03-31：在当前 Linux Docker 环境上完成正式的一致性联调：world state、world advance、群聊、私聊、朋友圈 API 与默认会话读写检查均已跑通并留存日志与 JSON 产物至 `.codex-tmp`。
 - 2026-03-31：将 relationship 更新逻辑重构为显式交互规则表，补充 `moment_comment` / `moment_like` 预留规则，并在仓储层加入 affinity 小数收束，避免多次累加后的浮点误差污染持久化结果。
 - 2026-03-31：新增 `RelationshipService` 服务级测试，覆盖默认关系边创建、双向关系增量与 affinity 上限钳制；本地轻量模式下后端测试扩展到 `23` 项，当前全部通过。
+- 2026-03-31：新增 `moment_interactions` 持久化表、`MomentInteractionService` 与 `/api/social/moments/{moment_id}/comments|likes|interactions` 接口，打通朋友圈评论 / 点赞的最小后端闭环。
+- 2026-03-31：朋友圈评论 / 点赞链路现会同步驱动 relationship 更新并记录 world event，相关状态可通过现有 world/social API 直接读取。
+- 2026-03-31：新增 moment interaction 服务级与 API 级测试，覆盖 comment / like 创建、重复点赞去重、interaction 列表读取与 world event 记录；本地轻量模式下后端测试扩展到 `25` 项，当前全部通过。
+- 2026-03-31：新增 `plans` 持久化表与 runtime 内 plan repository，bootstrap 初始任务与 follow-up task 现均从 plan 对象派生，调度任务 payload 会稳定携带 `plan_id`。
+- 2026-03-31：world persistence 现会同步持久化并恢复 plan，对应恢复后的 pending task 会继续指向已恢复的 plan；同一 active plan 在 runtime 中只保留一条当前 pending task。
+- 2026-03-31：新增 plan 持久化测试，覆盖 task 从 plan 派生、plan 恢复后与 pending task 对齐；本地轻量模式下后端测试扩展到 `26` 项，当前全部通过。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 推进 plan 持久化，把当前调度任务提升为“计划对象 + 调度任务”的组合
-  - 补齐朋友圈 comment / like 最小闭环及对应事件记录
-  - 继续把 relationship 规则接入更多交互场景，并让导演面板与后续决策逻辑更稳定消费这些关系数据
-- 领域补全后，按以下顺序继续开发：
-  - 继续补强导演模式的延迟可见规则与控制能力
+  - 落地导演模式的延迟可见规则，先补私聊、计划和关系变化的延迟展示逻辑
+  - 增加导演控制能力最小闭环，例如暂停 / 恢复 / 加速
+  - 基于已完成的 moment interaction 后端链路，补前端可视化与导演视图中的互动展示
+- 导演能力补齐后，按以下顺序继续开发：
   - 将当前模板化消息表达升级为更完整的角色表达生成逻辑
   - 把 Redis 真正接入事件队列与调度协作链路
 - 在后续开发任务完成后，持续维护这份进度文档。
