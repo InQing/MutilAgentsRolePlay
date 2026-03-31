@@ -58,12 +58,12 @@ V1 暂不包含：
 
 ## 3. 当前实现状态总览
 
-截至当前阶段，项目已从“纯方案阶段”进入“后端核心闭环可运行、可测试”的状态。
+截至当前阶段，项目已从“纯方案阶段”进入“最小产品闭环可运行，且已完成云端基础部署验证”的状态。
 
 ### 3.1 已完成的内容
 
 - Monorepo 结构已建立
-- 前端基础页面已可运行
+- 前端最小可用页面已可运行
 - 后端 FastAPI 基础服务已可运行
 - world runtime 已具备基本时钟、调度、事件记录与状态持久化
 - social 已具备群聊、私聊、朋友圈的基础消息落库能力
@@ -75,6 +75,8 @@ V1 暂不包含：
   - follow-up task 自动续排
 - SQLite 轻量本地模式已跑通
 - 后端本地测试已通过 17 项
+- 首页、群聊页、朋友圈页、导演页都已接入真实后端数据
+- 云端 Docker Compose 已包含 Web + API + PostgreSQL + Redis，并已完成第一轮手工 smoke check
 
 ### 3.2 尚未完成的内容
 
@@ -89,10 +91,10 @@ V1 暂不包含：
 
 当前阶段可以定义为：
 
-- 本地核心闭环可运行
+- 最小产品闭环可运行
 - 基础自治能力已可验证
-- 可以继续进入功能增强
-- 但在进入大规模功能扩展前，架构边界和测试基线必须继续保持
+- Ubuntu 云服务器上的 Docker 常驻部署已可访问并完成基础手工验证
+- 但在进入大规模功能扩展前，仍需先完成正式的一致性测试与恢复验证
 
 ## 4. 技术栈与理由
 
@@ -147,7 +149,7 @@ V1 暂不包含：
 - Redis
 - 对外主要暴露 Web，API 默认仅绑定服务器本机回环地址
 
-目前真正跑通并经过测试的是轻量本地模式；云端 Docker Compose 已补齐 `web` 服务与服务间内网配置，但仍待真实服务器联调验证。
+目前真正跑通并经过测试的是轻量本地模式；云端 Docker Compose 已补齐 `web` 服务与服务间内网配置，并已完成真实服务器上的手工 smoke check，但自动化一致性验证仍待补齐。
 
 ## 5. 仓库结构
 
@@ -171,8 +173,8 @@ MutilAgentsRolePlay/
 
 - `apps/web`
   - 前端 Web 应用
-  - 当前包含首页和导演页的基础壳子
-  - 暂未接入真实后端数据
+  - 当前已包含首页、群聊页、朋友圈页、导演页
+  - 已接入 world、social、director 的真实后端数据
 
 - `services/api`
   - 后端主服务
@@ -725,16 +727,18 @@ MutilAgentsRolePlay/
 ### 12.2 当前能力
 
 - 能运行
-- 能展示项目方向和当前骨架
+- 能提供最小化可用的 Web 闭环
 - 首页已可读取真实 world state，并提供前端“推进世界”入口
 - 群聊页已可读取真实会话与消息，并支持向默认群聊发送消息
 - 朋友圈页已可读取真实 moment 流，并支持发布新动态
 - 导演页已可读取真实 director panel API，并展示角色快照、关系快照、事件日志与会话预览
+- 云端 Docker 部署已完成第一轮手工 smoke check，当前页面与最小交互链路均可访问
 
 ### 12.3 当前限制
 
 - 没有世界状态实时推送
 - 还没有私聊可视化页面
+- Docker/PostgreSQL/Redis 环境的一致性验证与自动化检查仍未完成
 
 ## 13. 当前测试基线
 
@@ -819,11 +823,12 @@ MutilAgentsRolePlay/
 如果后续有人接手本项目，建议按以下顺序理解和进入开发：
 
 1. 读本文件第 6 到第 10 节
-2. 跑一遍 `scripts/local/run-backend-tests.ps1`
-3. 看 `services/api/app/world/service.py`
-4. 看 `services/api/app/agent_runtime/executor.py`
-5. 看 `services/api/app/social/service.py`
-6. 再看 `docs/upcoming-work-plan.md`
+2. 先看 `docs/project-progress.md` 了解最近一次交接状态
+3. 看 `docs/upcoming-work-plan.md` 明确下一阶段任务
+4. 看 `services/api/app/world/service.py`
+5. 看 `services/api/app/agent_runtime/executor.py`
+6. 看 `services/api/app/social/service.py`
+7. 再根据需要跑本地测试或 Docker 联调
 
 如果要继续后端功能，最优先不要随便改动：
 
