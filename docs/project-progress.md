@@ -2,8 +2,8 @@
 
 ## 当前阶段
 
-- 阶段：导演能力落地的最小闭环已完成，当前主线进入阶段三“角色表达升级”
-- 概要：当前项目已具备最小可用 Web 闭环、自治主链路、云端 Docker 常驻部署能力、阶段二领域补全，以及阶段四导演模式所需的最小观察 / 控制 / 轻量干预闭环。当前可以把导演细则收尾视为并行补完项，主开发焦点切到表达层抽象、角色状态接入与真实 LLM 表达生成。
+- 阶段：角色管理系统前置阶段已完成，当前主线切换到新的阶段四“角色表达升级”
+- 概要：当前项目已具备最小可用 Web 闭环、自治主链路、云端 Docker 常驻部署能力、阶段二领域补全、导演模式最小观察 / 控制 / 轻量干预闭环，以及新的角色管理系统基础。角色定义现在已有独立页面、独立 API、角色画像持久化与完整 CRUD，后续表达层和多模型 LLM 接入可以直接消费 `character` 域中的正式角色数据。
 
 ## 最近变更
 
@@ -99,14 +99,22 @@
 - 2026-03-31：新增导演 inject event API：`/api/director/inject`，支持写入即时可见的导演注记，并可为目标角色注入一条立即可执行的调度任务。
 - 2026-03-31：导演页现已接入 inject event 表单，可选择“仅记录导演注记”或“指定角色 + 注入任务意图”的轻量干预模式。
 - 2026-03-31：新增 inject event API 测试，覆盖日志可见性、pending task 增量与目标角色后续私聊响应；本地轻量模式下后端测试扩展到 `30` 项，当前全部通过。
+- 2026-03-31：重排 `docs/project-context.md` 与 `docs/upcoming-work-plan.md`，把“角色管理系统”前置到表达层与 LLM 接入之前，并将角色画像职责正式归入 `character` 域。
+- 2026-03-31：新增角色管理后端 API：`GET/PUT/POST/DELETE /api/characters`，支持现有角色编辑与完整角色 CRUD。
+- 2026-03-31：角色定义现已扩展为“角色画像 + 行为参数”，角色画像以结构化 JSON 形式持久化到 `characters` 表，并通过数据库初始化兼容逻辑补齐旧库加列能力。
+- 2026-03-31：新增 `CharacterManagementService`，角色更新现会立即作用于 runtime，并在修改 `current_plan_summary` 时同步更新 active plan summary。
+- 2026-03-31：新增角色创建 / 删除联动：创建角色时自动补齐初始 plan、pending task 与默认关系边；删除角色时同步移除 active plan、pending task 与相关关系边，但保留历史消息与 world event。
+- 2026-03-31：新增独立角色页 `/characters` 与前端同源代理，当前可在 Web 端管理显示名、角色画像、当前计划、情绪与社交参数，并支持新增 / 删除角色。
+- 2026-03-31：新增角色管理服务级与 API 级测试，覆盖角色编辑、持久化恢复、角色创建 / 删除及历史消息保留；本地轻量模式下后端测试扩展到 `34` 项，当前全部通过。
+- 2026-03-31：完成 `npm run typecheck:web` 与 `npm run build:web`，确认角色管理页面、代理路由与共享契约可正常通过前端类型检查和生产构建。
 
 ## 下一步
 
 - 当前最优先项为：
-  - 开始阶段三：抽离独立表达层，停止在 `AutonomousActionExecutor` 中继续堆文本模板
-  - 让 persona / emotion_state / current_plan_summary / recent context 进入表达层输入
-  - 在保持 runtime 主骨架不变的前提下，为后续真实 LLM 表达接入预留 mockable 结构
-- 导演能力补齐后，按以下顺序继续开发：
+  - 进入新的阶段四：抽离独立表达层，停止在 `AutonomousActionExecutor` 中继续堆文本模板
+  - 让表达层直接消费 `character` 域中的角色画像、emotion_state、current_plan_summary 与 recent context
+  - 在保持 runtime 主骨架不变的前提下，为后续 provider-agnostic 的 LLM 表达接入预留 mockable 结构
+- 表达层稳定后，按以下顺序继续开发：
   - 继续细化导演延迟可见规则，并为导演页补前端交互回归检查
   - 把 Redis 真正接入事件队列与调度协作链路
 - 在后续开发任务完成后，持续维护这份进度文档。

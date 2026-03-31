@@ -29,6 +29,7 @@ export default function RootLayout({
             </div>
             <nav className="glass flex items-center gap-3 px-4 py-3 text-sm font-medium">
               <Link href="/">世界概览</Link>
+              <Link href="/characters">角色管理</Link>
               <Link href="/chat">群聊页</Link>
               <Link href="/moments">朋友圈</Link>
               <Link href="/director">导演面板</Link>

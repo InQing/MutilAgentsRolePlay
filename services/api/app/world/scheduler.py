@@ -28,6 +28,15 @@ class WorldScheduler:
         removed_tasks = [self._tasks.pop(task_id) for task_id in matching_ids]
         return sorted(removed_tasks, key=lambda task: (task.run_at, task.priority))
 
+    def remove_for_character(self, *, character_id: str) -> list[RuntimeTask]:
+        matching_ids = [
+            task_id
+            for task_id, task in self._tasks.items()
+            if task.payload.get("character_id") == character_id
+        ]
+        removed_tasks = [self._tasks.pop(task_id) for task_id in matching_ids]
+        return sorted(removed_tasks, key=lambda task: (task.run_at, task.priority))
+
     def snapshot(self) -> list[RuntimeTask]:
         return sorted(self._tasks.values(), key=lambda task: (task.run_at, task.priority))
 

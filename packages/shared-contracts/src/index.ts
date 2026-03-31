@@ -149,6 +149,39 @@ export interface WorldStateContract {
   pending_tasks: string[];
 }
 
+export interface CharacterProfileContract {
+  identity_and_background: string;
+  personality: string;
+  speaking_style: string;
+  appearance_and_presence: string;
+  additional_notes: string;
+}
+
+export interface EditableCharacterContract {
+  id: string;
+  display_name: string;
+  profile: CharacterProfileContract;
+  current_plan_summary: string;
+  emotion_state: string;
+  social_drive: number;
+  interrupt_threshold: number;
+}
+
+export interface CreateCharacterRequestContract {
+  display_name: string;
+  profile: CharacterProfileContract;
+  current_plan_summary: string;
+  emotion_state: string;
+  social_drive: number;
+  interrupt_threshold: number;
+}
+
+export interface UpdateCharacterRequestContract extends CreateCharacterRequestContract {}
+
+export interface DeleteCharacterResponseContract {
+  character_id: string;
+}
+
 export type ConversationTypeContract = "group" | "private" | "moment";
 
 export interface ConversationSummaryContract {

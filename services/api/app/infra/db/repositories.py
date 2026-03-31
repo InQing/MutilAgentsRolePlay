@@ -5,7 +5,7 @@ from uuid import uuid4
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.character.models import CharacterState
+from app.character.models import CharacterState, build_default_character_profile
 from app.infra.db.models import (
     CharacterRecord,
     ChatMessageRecord,
@@ -35,9 +35,20 @@ class CharacterRepository:
     def __init__(self) -> None:
         self._characters: dict[str, CharacterState] = {}
 
+    def save(self, character: CharacterState) -> None:
+        self._characters[character.id] = character
+
     def save_many(self, characters: Sequence[CharacterState]) -> None:
         for character in characters:
-            self._characters[character.id] = character
+            self.save(character)
+
+    def get(self, character_id: str | None) -> CharacterState | None:
+        if character_id is None:
+            return None
+        return self._characters.get(character_id)
+
+    def remove(self, character_id: str) -> CharacterState | None:
+        return self._characters.pop(character_id, None)
 
     def list_all(self) -> list[CharacterState]:
         return list(self._characters.values())
@@ -104,6 +115,18 @@ class PlanRepository:
     def replace_all(self, plans: Sequence[PlanItem]) -> None:
         self._plans = {plan.id: plan for plan in plans}
 
+    def remove(self, plan_id: str) -> PlanItem | None:
+        return self._plans.pop(plan_id, None)
+
+    def remove_for_character(self, *, character_id: str) -> list[PlanItem]:
+        matching_ids = [
+            plan.id
+            for plan in self._plans.values()
+            if plan.character_id == character_id
+        ]
+        removed = [self._plans.pop(plan_id) for plan_id in matching_ids]
+        return sorted(removed, key=lambda item: (item.next_run_at, item.priority, item.id))
+
 
 class AsyncWorldRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -155,6 +178,7 @@ class AsyncCharacterRepository:
                     id=character.id,
                     world_id=world_id,
                     display_name=character.display_name,
+                    profile=character.profile.model_dump(),
                     current_plan_summary=character.current_plan_summary,
                     emotion_state=character.emotion_state,
                     social_drive=character.social_drive,
@@ -172,6 +196,12 @@ class AsyncCharacterRepository:
             CharacterState(
                 id=record.id,
                 display_name=record.display_name,
+                profile=build_default_character_profile(
+                    character_id=record.id,
+                    display_name=record.display_name,
+                )
+                if not record.profile
+                else record.profile,
                 current_plan_summary=record.current_plan_summary,
                 emotion_state=record.emotion_state,
                 social_drive=record.social_drive,
@@ -625,6 +655,22 @@ class AsyncRelationshipRepository:
             )
             for record in result.scalars().all()
         ]
+
+    async def delete_for_character(
+        self,
+        *,
+        world_id: str,
+        character_id: str,
+    ) -> None:
+        await self.session.execute(
+            delete(RelationshipRecord).where(
+                RelationshipRecord.world_id == world_id,
+                (
+                    (RelationshipRecord.source_character_id == character_id)
+                    | (RelationshipRecord.target_character_id == character_id)
+                ),
+            )
+        )
 
     async def apply_affinity_delta(
         self,

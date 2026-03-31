@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.agent_runtime.thinking.base import ThinkingEngine
 from app.agent_runtime.types import ActionDecision, ActionType, VisibleContext, VisibleEvent
-from app.character.models import CharacterState
+from app.character.models import CharacterState, build_default_character_profile
 from app.infra.db.repositories import (
     CharacterRepository,
     PlanRepository,
@@ -43,6 +43,10 @@ class WorldRuntimeService:
             CharacterState(
                 id="char-001",
                 display_name="林澈",
+                profile=build_default_character_profile(
+                    character_id="char-001",
+                    display_name="林澈",
+                ),
                 current_plan_summary="整理今天的群聊动态并准备晚上的聚会",
                 emotion_state="curious",
                 social_drive=0.82,
@@ -51,6 +55,10 @@ class WorldRuntimeService:
             CharacterState(
                 id="char-002",
                 display_name="许遥",
+                profile=build_default_character_profile(
+                    character_id="char-002",
+                    display_name="许遥",
+                ),
                 current_plan_summary="专注完成工作，在必要时才回复消息",
                 emotion_state="focused",
                 social_drive=0.34,
@@ -138,12 +146,7 @@ class WorldRuntimeService:
         return self.scheduler.snapshot()
 
     def get_character(self, character_id: str | None) -> CharacterState | None:
-        if character_id is None:
-            return None
-        for character in self.character_repository.list_all():
-            if character.id == character_id:
-                return character
-        return None
+        return self.character_repository.get(character_id)
 
     def pick_peer_character_id(self, *, exclude_id: str) -> str | None:
         for character in self.character_repository.list_all():
@@ -185,6 +188,45 @@ class WorldRuntimeService:
             self._next_event_sequence = max(self._next_event_sequence, event.sequence_number + 1)
         self.event_bus.publish(event)
         self.event_repository.append(event)
+
+    def add_character(self, *, character: CharacterState) -> RuntimeTask:
+        self.character_repository.save(character)
+        plan = self._build_initial_plan_for_character(character=character)
+        self.plan_repository.save(plan)
+        task = self._build_task_from_plan(plan)
+        self.scheduler.schedule(task)
+        self.scheduler_repository.save(task)
+        return task
+
+    def update_character(self, *, character: CharacterState) -> CharacterState:
+        self.character_repository.save(character)
+        existing_plan = self.plan_repository.get_active_for_character(character_id=character.id)
+        if existing_plan is not None:
+            self.plan_repository.save(
+                existing_plan.model_copy(
+                    update={
+                        "summary": character.current_plan_summary,
+                        "updated_at": self.clock.snapshot().now,
+                    }
+                )
+            )
+        return character
+
+    def remove_character(self, *, character_id: str) -> CharacterState | None:
+        character = self.character_repository.remove(character_id)
+        if character is None:
+            return None
+
+        removed_plans = self.plan_repository.remove_for_character(character_id=character_id)
+        for plan in removed_plans:
+            removed_tasks = self.scheduler.remove_for_plan(plan_id=plan.id)
+            for task in removed_tasks:
+                self.scheduler_repository.remove(task.id)
+
+        dangling_tasks = self.scheduler.remove_for_character(character_id=character_id)
+        for task in dangling_tasks:
+            self.scheduler_repository.remove(task.id)
+        return character
 
     def schedule_follow_up_task(
         self,
@@ -266,6 +308,17 @@ class WorldRuntimeService:
                 "plan_id": plan.id,
             },
             priority=plan.priority,
+        )
+
+    def _build_initial_plan_for_character(self, *, character: CharacterState) -> PlanItem:
+        initial_intent = "check_group_chat" if character.social_drive >= 0.6 else "stay_on_task"
+        initial_delay_minutes = 10 if character.social_drive >= 0.6 else 18
+        return PlanItem(
+            character_id=character.id,
+            summary=character.current_plan_summary,
+            intent=initial_intent,
+            next_run_at=self.clock.snapshot().now + timedelta(minutes=initial_delay_minutes),
+            priority=1,
         )
 
     def _resolve_task_intent(self, task: RuntimeTask) -> str | None:

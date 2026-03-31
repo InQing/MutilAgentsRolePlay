@@ -13,6 +13,9 @@ class WorldEventKind(str, Enum):
     ACTION_SKIPPED = "action_skipped"
     MOMENT_INTERACTION_RECORDED = "moment_interaction_recorded"
     RELATIONSHIP_UPDATED = "relationship_updated"
+    CHARACTER_CREATED = "character_created"
+    CHARACTER_UPDATED = "character_updated"
+    CHARACTER_DELETED = "character_deleted"
 
 
 class WorldEvent(BaseModel):

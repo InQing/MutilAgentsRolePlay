@@ -33,6 +33,15 @@ class RelationshipService:
             repository = AsyncRelationshipRepository(session)
             return await repository.list_for_world(world_id=self.world_id)
 
+    async def delete_character_relationships(self, *, character_id: str) -> None:
+        async with self.database.session_factory() as session:
+            async with session.begin():
+                repository = AsyncRelationshipRepository(session)
+                await repository.delete_for_character(
+                    world_id=self.world_id,
+                    character_id=character_id,
+                )
+
     async def apply_social_interaction(
         self,
         *,

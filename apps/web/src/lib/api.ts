@@ -1,10 +1,14 @@
 import type {
+  CreateCharacterRequestContract,
   ConversationSummaryContract,
   CreateMessageRequestContract,
   CreateMomentRequestContract,
+  DeleteCharacterResponseContract,
   DirectorPanelStateContract,
+  EditableCharacterContract,
   InjectDirectorEventRequestContract,
   MessageRecordContract,
+  UpdateCharacterRequestContract,
   WorldStateContract
 } from "@mutilagentsroleplay/shared-contracts";
 
@@ -82,6 +86,43 @@ export async function fetchWorldState(): Promise<WorldStateContract | null> {
 export async function advanceWorld(seconds = 900): Promise<WorldStateContract | null> {
   return fetchBackendJson<WorldStateContract>(`/world/advance?seconds=${seconds}`, {
     method: "POST"
+  });
+}
+
+export async function fetchCharacters(): Promise<EditableCharacterContract[] | null> {
+  return fetchBackendJson<EditableCharacterContract[]>("/characters");
+}
+
+export async function updateCharacter(
+  characterId: string,
+  payload: UpdateCharacterRequestContract
+): Promise<EditableCharacterContract | null> {
+  return fetchBackendJson<EditableCharacterContract>(`/characters/${characterId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createCharacter(
+  payload: CreateCharacterRequestContract
+): Promise<EditableCharacterContract | null> {
+  return fetchBackendJson<EditableCharacterContract>("/characters", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteCharacter(
+  characterId: string
+): Promise<DeleteCharacterResponseContract | null> {
+  return fetchBackendJson<DeleteCharacterResponseContract>(`/characters/${characterId}`, {
+    method: "DELETE"
   });
 }
 

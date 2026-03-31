@@ -21,6 +21,7 @@ class CharacterRecord(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     world_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    profile: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     current_plan_summary: Mapped[str] = mapped_column(Text, nullable=False)
     emotion_state: Mapped[str] = mapped_column(String(64), nullable=False, default="steady")
     social_drive: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)

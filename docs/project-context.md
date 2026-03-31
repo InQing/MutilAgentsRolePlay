@@ -89,8 +89,9 @@ V1 暂不包含：
 
 ### 3.2 尚未完成的内容
 
+- 角色管理系统尚未落地，当前角色仍主要来自 bootstrap 与持久化恢复，用户还不能直接管理角色定义
 - 角色表达仍是模板化，不是真正的角色语言生成
-- director 面板已接入真实 API 数据，且已有前端控制入口、moment interaction 展示、inject event 与统一可见性 helper；导演细则仍有收尾项，但已不再阻塞进入阶段三表达层升级
+- director 面板已接入真实 API 数据，且已有前端控制入口、moment interaction 展示、inject event 与统一可见性 helper；导演细则仍有收尾项，但当前优先级已后移到角色管理与表达层之后
 - Redis 尚未进入真实调度链路
 - WebSocket 实时广播尚未实现
 
@@ -103,7 +104,7 @@ V1 暂不包含：
 - Ubuntu 云服务器上的 Docker 常驻部署已可访问并完成正式一致性验证
 - 领域补全阶段中的 relationship / plan / moment interaction 最小闭环已完成
 - 导演模式已进入“最小闭环完成、细则待补”的阶段
-- 下一阶段开发重点切换为阶段三“角色表达升级”
+- 下一阶段开发重点调整为“角色管理系统 -> 角色表达升级 -> LLM 兼容接入”
 
 ## 4. 技术栈与理由
 
@@ -235,6 +236,8 @@ MutilAgentsRolePlay/
 当前已实现路由：
 
 - `/api/health`
+- `/api/characters`
+- `/api/characters/{character_id}`
 - `/api/world/state`
 - `/api/world/advance`
 - `/api/director/panel`
@@ -278,6 +281,21 @@ MutilAgentsRolePlay/
 - `executor.py`
 - `thinking/base.py`
 - `thinking/state_driven.py`
+
+#### `character`
+
+职责：
+
+- 管理角色定义与角色运行态
+- 持有角色画像（profile）与当前行为参数
+- 为 runtime、director、后续表达层提供统一角色数据来源
+- 承接角色管理 API 和独立角色页所需的数据读写
+
+说明：
+
+- 角色画像归 `character` 域，不归表达层
+- 表达层未来只消费角色画像与角色运行态，不负责定义或维护角色画像
+- 角色管理当前会先落“编辑现有角色”的独立页面，再扩展为完整 CRUD
 
 #### `social`
 
@@ -655,6 +673,8 @@ MutilAgentsRolePlay/
 
 这意味着后续如果要接入真正角色表达生成，不应该直接改 runtime 主骨架，而应该替换或扩展表达生成层。
 
+但在进入表达层升级之前，项目会先完成角色管理系统，使角色画像、当前计划、情绪和行为参数都有稳定的产品级配置入口。表达层恢复开发后，会直接读取 `character` 域中的角色数据，而不是在表达层内部临时定义 persona。
+
 ### 10.4 当前 follow-up task 策略
 
 当前续排逻辑由上一次动作决定下一次意图和延迟时间。
@@ -725,6 +745,7 @@ MutilAgentsRolePlay/
 
 - 只有接口
 - 尚未接真实模型
+- 后续会按 provider-agnostic 方向扩展，避免把表达层实现绑定到单一供应商
 
 ## 12. 前端状态
 
