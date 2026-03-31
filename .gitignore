@@ -3,6 +3,7 @@ node_modules/
 .next/
 dist/
 coverage/
+*.tsbuildinfo
 
 # Python / api
 .venv/
@@ -10,6 +11,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 *.pyc
+services/api/mutilagentsroleplay_api.egg-info/
 
 # Environment
 .env
@@ -21,3 +23,6 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local tooling artifacts
+.codex/
+.codex-tmp/
