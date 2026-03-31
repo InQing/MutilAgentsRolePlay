@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException
 
 from app.bootstrap import get_runtime_registry
-from app.director.models import DirectorPanelState, UpdateWorldSpeedRequest
+from app.director.models import (
+    DirectorPanelState,
+    InjectDirectorEventRequest,
+    UpdateWorldSpeedRequest,
+)
 from app.director.service import DirectorControlService, DirectorPanelService
 
 router = APIRouter()
@@ -64,4 +68,17 @@ async def update_world_speed(request: UpdateWorldSpeedRequest) -> DirectorPanelS
         await control_service.set_world_speed(speed_multiplier=request.speed_multiplier)
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return await panel_service.get_panel_state()
+
+
+@router.post("/inject", response_model=DirectorPanelState)
+async def inject_director_event(request: InjectDirectorEventRequest) -> DirectorPanelState:
+    control_service = _build_control_service()
+    panel_service = _build_panel_service()
+    try:
+        await control_service.inject_event(request=request)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return await panel_service.get_panel_state()

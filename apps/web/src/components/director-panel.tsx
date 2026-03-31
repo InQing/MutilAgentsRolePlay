@@ -1,6 +1,9 @@
 "use client";
 
-import type { DirectorPanelStateContract } from "@mutilagentsroleplay/shared-contracts";
+import type {
+  DirectorPanelStateContract,
+  DirectorTaskIntentContract
+} from "@mutilagentsroleplay/shared-contracts";
 import { useEffect, useState, useTransition } from "react";
 
 type DirectorPanelProps = {
@@ -11,10 +14,20 @@ const delayedPanels = [
   "查看私聊记录（延迟可见）",
   "查看计划变更历史与关系变化摘要",
   "查看朋友圈评论与点赞聚合",
-  "暂停、恢复并调整世界节奏"
+  "暂停、恢复并调整世界节奏",
+  "注入轻量事件并推动角色响应"
 ];
 
 const SPEED_OPTIONS = [0.5, 1, 2, 5];
+const INJECT_INTENT_OPTIONS: Array<{
+  label: string;
+  value: DirectorTaskIntentContract;
+}> = [
+  { label: "回应导演提示", value: "reply_to_direct_prompt" },
+  { label: "查看群聊", value: "check_group_chat" },
+  { label: "公开更新", value: "share_update" },
+  { label: "保持当前节奏", value: "stay_on_task" }
+];
 
 function formatTime(value?: string | null) {
   if (!value) {
@@ -45,6 +58,10 @@ async function fetchPanelFromProxy() {
 export function DirectorPanel({ initialPanel }: DirectorPanelProps) {
   const [panel, setPanel] = useState(initialPanel);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [injectSummary, setInjectSummary] = useState("");
+  const [injectTargetCharacterId, setInjectTargetCharacterId] = useState("");
+  const [injectTaskIntent, setInjectTaskIntent] =
+    useState<DirectorTaskIntentContract>("reply_to_direct_prompt");
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -149,6 +166,34 @@ export function DirectorPanel({ initialPanel }: DirectorPanelProps) {
         }),
       `世界速度已调整为 ${speedMultiplier}x。`
     );
+  }
+
+  function handleInjectEvent(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const summary = injectSummary.trim();
+    if (!summary) {
+      setFeedback("请先填写导演注记内容。");
+      return;
+    }
+
+    runPanelAction(
+      () =>
+        fetch("/api/director/inject", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            summary,
+            target_character_id: injectTargetCharacterId || undefined,
+            task_intent: injectTargetCharacterId ? injectTaskIntent : undefined
+          })
+        }),
+      injectTargetCharacterId
+        ? "导演事件已注入，目标角色已收到新的即时任务。"
+        : "导演注记已注入到世界日志。"
+    );
+    setInjectSummary("");
   }
 
   return (
@@ -287,8 +332,8 @@ export function DirectorPanel({ initialPanel }: DirectorPanelProps) {
           <h3 className="text-xl font-semibold text-ink">当前实现状态</h3>
           {panel ? (
             <div className="mt-4 space-y-4 text-sm leading-6 text-slate-700">
-              <p>导演权限、运行时角色状态、最近事件日志、会话预览和朋友圈互动聚合已经接入真实后端接口。</p>
-              <p>当前这一版以“控制闭环 + 统一可见性 + 互动展示”为收口，暂不在这里加入 inject event。</p>
+              <p>导演权限、运行时角色状态、最近事件日志、会话预览、朋友圈互动聚合和 inject event 都已经接入真实后端接口。</p>
+              <p>当前这一版以“控制闭环 + 统一可见性 + 互动展示 + 轻量注入”为收口，后续再继续细化更复杂的导演规则。</p>
             </div>
           ) : (
             <div className="mt-4 space-y-4 text-sm leading-6 text-slate-700">
@@ -301,6 +346,82 @@ export function DirectorPanel({ initialPanel }: DirectorPanelProps) {
 
       {panel ? (
         <>
+          <section className="glass p-6">
+            <h3 className="text-xl font-semibold text-ink">导演事件注入</h3>
+            <p className="muted mt-3 text-sm leading-6">
+              你可以只写一条即时导演注记，也可以顺手指定目标角色并注入一个轻量任务，让它在下一次推进时沿现有调度链路响应。
+            </p>
+            <form className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]" onSubmit={handleInjectEvent}>
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-slate-700" htmlFor="director-inject-summary">
+                  导演注记
+                </label>
+                <textarea
+                  id="director-inject-summary"
+                  className="min-h-32 w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-orange-300"
+                  onChange={(event) => setInjectSummary(event.target.value)}
+                  placeholder="例如：请先给我一个简短回复，然后继续你原本的节奏。"
+                  value={injectSummary}
+                />
+              </div>
+              <div className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor="director-target-character">
+                    目标角色
+                  </label>
+                  <select
+                    id="director-target-character"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-orange-300"
+                    onChange={(event) => setInjectTargetCharacterId(event.target.value)}
+                    value={injectTargetCharacterId}
+                  >
+                    <option value="">仅记录导演注记</option>
+                    {panel.characters.map((character) => (
+                      <option key={character.id} value={character.id}>
+                        {character.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700" htmlFor="director-task-intent">
+                    注入任务意图
+                  </label>
+                  <select
+                    disabled={!injectTargetCharacterId}
+                    id="director-task-intent"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-orange-300 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                    onChange={(event) =>
+                      setInjectTaskIntent(event.target.value as DirectorTaskIntentContract)
+                    }
+                    value={injectTaskIntent}
+                  >
+                    {INJECT_INTENT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  className="w-full rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+                  disabled={
+                    isPending ||
+                    !panel.permissions.can_inject_events ||
+                    !injectSummary.trim()
+                  }
+                  type="submit"
+                >
+                  {isPending ? "注入中..." : "注入导演事件"}
+                </button>
+                <p className="text-xs leading-5 text-slate-500">
+                  当前注入权限：{panel.permissions.can_inject_events ? "已启用" : "未启用"}。
+                  指定目标角色时，系统会额外塞入一条立即可执行的调度任务。
+                </p>
+              </div>
+            </form>
+          </section>
+
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <section className="glass p-6">
               <h3 className="text-xl font-semibold text-ink">角色运行快照</h3>

@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class VisibilityMode(StrEnum):
@@ -20,6 +20,28 @@ class PermissionView(BaseModel):
 
 class UpdateWorldSpeedRequest(BaseModel):
     speed_multiplier: float = Field(gt=0.0)
+
+
+class InjectDirectorEventRequest(BaseModel):
+    summary: str
+    target_character_id: str | None = None
+    task_intent: str | None = None
+
+    @field_validator("summary")
+    @classmethod
+    def validate_summary(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("summary must not be empty")
+        return normalized
+
+    @field_validator("target_character_id", "task_intent")
+    @classmethod
+    def validate_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip()
+        return normalized or None
 
 
 class DirectorLogEntry(BaseModel):

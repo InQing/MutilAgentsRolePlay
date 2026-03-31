@@ -117,3 +117,47 @@ def test_director_panel_returns_moment_interactions_after_visibility_delay(
         item["kind"] == "moment_interaction_recorded"
         for item in visible_payload["recent_logs"]
     )
+
+
+def test_director_inject_api_records_note_and_can_schedule_targeted_follow_up(
+    client: TestClient,
+) -> None:
+    initial_panel = client.get("/api/director/panel")
+    assert initial_panel.status_code == 200
+    initial_payload = initial_panel.json()
+
+    inject_response = client.post(
+        "/api/director/inject",
+        json={
+            "summary": "请马上给我一个简短回复",
+            "target_character_id": "char-001",
+            "task_intent": "reply_to_direct_prompt",
+        },
+    )
+    assert inject_response.status_code == 200
+    injected_panel = inject_response.json()
+    assert injected_panel["pending_task_count"] == initial_payload["pending_task_count"] + 1
+    assert any(
+        "Director injected a targeted note" in item["summary"]
+        for item in injected_panel["recent_logs"]
+    )
+
+    advance_response = client.post("/api/world/advance", params={"seconds": 1})
+    assert advance_response.status_code == 200
+
+    conversations = client.get("/api/social/conversations")
+    assert conversations.status_code == 200
+    private_conversation = next(
+        item
+        for item in conversations.json()
+        if item["conversation_type"] == "private"
+    )
+
+    messages = client.get(
+        f"/api/social/conversations/{private_conversation['id']}/messages"
+    )
+    assert messages.status_code == 200
+    message_payload = messages.json()
+    assert len(message_payload) == 1
+    assert message_payload[0]["sender_id"] == "char-001"
+    assert message_payload[0]["target_id"] == "user-001"

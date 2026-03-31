@@ -93,6 +93,18 @@ export interface DirectorMomentInteractionEntryContract {
   created_at: string;
 }
 
+export type DirectorTaskIntentContract =
+  | "reply_to_direct_prompt"
+  | "check_group_chat"
+  | "share_update"
+  | "stay_on_task";
+
+export interface InjectDirectorEventRequestContract {
+  summary: string;
+  target_character_id?: string | null;
+  task_intent?: DirectorTaskIntentContract | string | null;
+}
+
 export interface DirectorPanelStateContract {
   world_id: string;
   current_time: string;

@@ -3,6 +3,7 @@ import type {
   CreateMessageRequestContract,
   CreateMomentRequestContract,
   DirectorPanelStateContract,
+  InjectDirectorEventRequestContract,
   MessageRecordContract,
   WorldStateContract
 } from "@mutilagentsroleplay/shared-contracts";
@@ -59,6 +60,18 @@ export async function updateDirectorWorldSpeed(
     body: JSON.stringify({
       speed_multiplier: speedMultiplier
     })
+  });
+}
+
+export async function injectDirectorEvent(
+  payload: InjectDirectorEventRequestContract
+): Promise<DirectorPanelStateContract | null> {
+  return fetchBackendJson<DirectorPanelStateContract>("/director/inject", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
   });
 }
 

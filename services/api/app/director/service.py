@@ -1,10 +1,12 @@
 import asyncio
+from datetime import timedelta
 
 from app.character.models import CharacterState
 from app.director.models import (
     DirectorCharacterSnapshot,
     DirectorConversationPreview,
     DirectorLogEntry,
+    InjectDirectorEventRequest,
     DirectorMomentInteractionEntry,
     DirectorPanelState,
     DirectorRelationshipEdge,
@@ -360,6 +362,8 @@ class DirectorPanelService:
 
 
 class DirectorControlService:
+    DIRECTOR_SOURCE_ID = "user-001"
+
     def __init__(
         self,
         *,
@@ -416,7 +420,62 @@ class DirectorControlService:
         )
         await self.world_persistence.persist_runtime(self.world_runtime)
 
+    async def inject_event(self, *, request: InjectDirectorEventRequest) -> None:
+        self._assert_can_inject_events()
+        current_time = self.world_runtime.clock.snapshot().now
+        target_character = self.world_runtime.get_character(request.target_character_id)
+
+        if request.target_character_id is not None and target_character is None:
+            raise ValueError(f"Target character {request.target_character_id} was not found.")
+
+        payload: dict[str, str] = {
+            "control_action": "inject_event",
+            "injected_summary": request.summary,
+        }
+        if request.target_character_id is not None:
+            payload["character_id"] = self.DIRECTOR_SOURCE_ID
+            payload["target_character_id"] = request.target_character_id
+            payload["task_intent"] = request.task_intent or "reply_to_direct_prompt"
+            summary = (
+                "Director injected a targeted note for "
+                f"{target_character.display_name}: {request.summary}"
+            )
+        else:
+            summary = f"Director injected a world note: {request.summary}"
+
+        self.world_runtime.record_event(
+            WorldEvent(
+                world_id=self.world_runtime.world_id,
+                kind=WorldEventKind.DIRECTOR_NOTE,
+                summary=summary,
+                created_at=current_time,
+                payload=payload,
+            )
+        )
+
+        if request.target_character_id is not None:
+            self.world_runtime.scheduler.schedule(
+                RuntimeTask(
+                    world_id=self.world_runtime.world_id,
+                    task_type="character_plan_tick",
+                    run_at=current_time + timedelta(seconds=1),
+                    payload={
+                        "character_id": request.target_character_id,
+                        "intent": request.task_intent or "reply_to_direct_prompt",
+                        "director_injected": "true",
+                    },
+                    priority=0,
+                )
+            )
+
+        await self.world_persistence.persist_runtime(self.world_runtime)
+
     def _assert_can_control_world(self) -> None:
         permission_view = self.permission_policy.describe_view()
         if not permission_view.can_control_world:
             raise PermissionError("Director control is disabled by the current permission policy.")
+
+    def _assert_can_inject_events(self) -> None:
+        permission_view = self.permission_policy.describe_view()
+        if not permission_view.can_inject_events:
+            raise PermissionError("Director event injection is disabled by the current permission policy.")
