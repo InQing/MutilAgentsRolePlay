@@ -114,6 +114,8 @@
 - 2026-03-31：继续完成阶段四中的 LLM 兼容接入：新增 `LLMClient` provider 工厂与两类真实 provider 通道，当前支持 `openai_compatible` 与 `gemini` 配置方式，便于后续接入 DeepSeek、Gemini 等模型。
 - 2026-03-31：新增 LLM provider 工厂与响应解析测试，覆盖 provider 选择、兼容接口消息提取与 Gemini 返回内容提取；本地轻量模式下后端测试扩展到 `43` 项，当前全部通过。
 - 2026-03-31：更新 `.env.example`，补充 LLM provider、model、api key、base url 与 timeout 配置入口，默认仍关闭真实模型调用并保留模板 fallback。
+- 2026-04-05：使用用户提供的 Gemini CLI 反代进行了真实联通验证；确认该端点对本项目应按 `openai_compatible` 协议使用，`gemini-3.0-pro` 当前不可用，实际可用且已验证的模型为 `gcli-gemini-3-pro-preview`。
+- 2026-04-05：已通过真实反代完成表达层端到端检查，`CharacterExpressionService -> LLMExpressionService -> OpenAICompatibleLLMClient` 链路和 `AutonomousActionExecutor` 实际执行链路都已成功生成 Gemini 文本输出。
 
 ## 下一步
 
