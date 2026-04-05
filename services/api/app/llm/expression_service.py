@@ -16,7 +16,7 @@ class LLMExpressionService:
             system_prompt=build_expression_system_prompt(),
             user_prompt=build_expression_user_prompt(expression_input=expression_input),
         )
-        content = parse_expression_content(payload)
+        content = parse_expression_content(payload, expression_input=expression_input)
         if not content:
             raise ValueError("llm expression payload returned empty content")
         return content
