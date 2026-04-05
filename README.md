@@ -50,9 +50,20 @@ Examples:
   - `MARP_LLM_PROVIDER=openai_compatible`
   - `MARP_LLM_MODEL=deepseek-chat`
   - `MARP_LLM_BASE_URL=https://api.deepseek.com/v1`
-- Gemini:
+- Gemini CLI reverse-proxy validated in this project:
+  - `MARP_LLM_PROVIDER=openai_compatible`
+  - `MARP_LLM_MODEL=gcli-gemini-3-pro-preview`
+  - `MARP_LLM_BASE_URL=https://catiecli.sukaka.top/v1`
+- Native Gemini endpoint:
   - `MARP_LLM_PROVIDER=gemini`
   - `MARP_LLM_MODEL=gemini-2.5-flash`
+
+### API key safety
+
+- Never commit a real `MARP_LLM_API_KEY` into `.env.example`, source files, or tracked docs.
+- Put the real key only in your local `.env`, server environment variables, or secret manager.
+- Because a real key was already shared during testing, the safest next step is to rotate it and replace it with a fresh one.
+- If you want to keep a local template, copy `.env.example` to `.env` and fill in only your local `.env`.
 
 ## Current runnable scope
 

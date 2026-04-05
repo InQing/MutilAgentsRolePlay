@@ -116,6 +116,7 @@
 - 2026-03-31：更新 `.env.example`，补充 LLM provider、model、api key、base url 与 timeout 配置入口，默认仍关闭真实模型调用并保留模板 fallback。
 - 2026-04-05：使用用户提供的 Gemini CLI 反代进行了真实联通验证；确认该端点对本项目应按 `openai_compatible` 协议使用，`gemini-3.0-pro` 当前不可用，实际可用且已验证的模型为 `gcli-gemini-3-pro-preview`。
 - 2026-04-05：已通过真实反代完成表达层端到端检查，`CharacterExpressionService -> LLMExpressionService -> OpenAICompatibleLLMClient` 链路和 `AutonomousActionExecutor` 实际执行链路都已成功生成 Gemini 文本输出。
+- 2026-04-05：更新 `.env.example` 与 `README.md`，把已验证可用的 Gemini CLI 反代接法收束为默认示例配置，并明确真实 `MARP_LLM_API_KEY` 只应保存在本地 `.env` 或部署环境变量中，不进入仓库。
 
 ## 下一步
 
