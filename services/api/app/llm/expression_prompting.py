@@ -70,8 +70,38 @@ def _build_state_guidance(expression_input: ExpressionInput) -> str:
     return f"{drive_hint}{interrupt_hint}"
 
 
+def _describe_affinity(affinity: float) -> str:
+    if affinity >= 0.55:
+        return "明显亲近"
+    if affinity >= 0.2:
+        return "略有亲近"
+    if affinity <= -0.55:
+        return "明显紧张"
+    if affinity <= -0.2:
+        return "略有距离"
+    return "关系中性"
+
+
+def _build_relationship_context_block(expression_input: ExpressionInput) -> str:
+    if not expression_input.relationship_context:
+        return "- 当前没有可用的角色关系摘要"
+
+    lines: list[str] = []
+    for relationship in expression_input.relationship_context:
+        target_prefix = "当前目标" if relationship.is_primary_target else "相关角色"
+        label_text = "、".join(relationship.labels) if relationship.labels else "无"
+        lines.append(
+            f"- {target_prefix}：{relationship.target_display_name}；"
+            f"关系判断：{_describe_affinity(relationship.affinity)}；"
+            f"亲密度：{relationship.affinity:.2f}；"
+            f"最近标签：{label_text}"
+        )
+    return "\n".join(lines)
+
+
 def build_expression_user_prompt(*, expression_input: ExpressionInput) -> str:
     recent_context = _build_recent_context_block(expression_input)
+    relationship_context = _build_relationship_context_block(expression_input)
     target_line = (
         f"目标对象：{expression_input.target_display_name or expression_input.target_id}"
         if expression_input.target_id or expression_input.target_display_name
@@ -95,6 +125,8 @@ def build_expression_user_prompt(*, expression_input: ExpressionInput) -> str:
             f"{target_line}",
             f"动作约束：{_build_action_instruction(expression_input)}",
             f"状态提示：{_build_state_guidance(expression_input)}",
+            "与该角色自身有关的关系摘要：",
+            relationship_context,
             "最近上下文：",
             recent_context,
             "输出要求：",
@@ -102,6 +134,7 @@ def build_expression_user_prompt(*, expression_input: ExpressionInput) -> str:
             "2. 不要添加角色名、冒号、引号、标题、括号动作说明或任何额外标签。",
             "3. 不要把“决策原因”原样复述出来，要把它转成自然表达。",
             "4. 用中文输出，控制在一到三句，优先短而自然。",
+            "5. 如果当前目标关系亲近，可以更自然地拉近语气；如果关系疏离或紧张，要保留分寸。",
         ]
     )
 

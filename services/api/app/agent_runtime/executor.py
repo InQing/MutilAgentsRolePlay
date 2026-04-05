@@ -3,7 +3,11 @@ from dataclasses import dataclass
 from app.agent_runtime.types import ActionDecision, ActionType, DirectorExplanation, VisibleContext, VisibleEvent
 from app.character.models import CharacterState
 from app.expression.interfaces import ExpressionGenerator
-from app.expression.models import ExpressionInput, ExpressionRecentEvent
+from app.expression.models import (
+    ExpressionInput,
+    ExpressionRecentEvent,
+    ExpressionRelationshipSummary,
+)
 from app.expression.service import CharacterExpressionService
 from app.relationship.service import RelationshipService
 from app.social.interfaces import AutonomousSocialGateway
@@ -104,7 +108,7 @@ class AutonomousActionExecutor:
             return None
 
         if decision.action_type == ActionType.GROUP_MESSAGE:
-            content = self._render_content(
+            content = await self._render_content(
                 character=character,
                 decision=decision,
                 visible_context=visible_context,
@@ -130,7 +134,7 @@ class AutonomousActionExecutor:
                 )
                 return None
             target_character = self.runtime.get_character(target_id)
-            content = self._render_content(
+            content = await self._render_content(
                 character=character,
                 decision=decision,
                 visible_context=visible_context,
@@ -143,7 +147,7 @@ class AutonomousActionExecutor:
                 content=content,
             )
         elif decision.action_type == ActionType.MOMENT_POST:
-            content = self._render_content(
+            content = await self._render_content(
                 character=character,
                 decision=decision,
                 visible_context=visible_context,
@@ -191,7 +195,7 @@ class AutonomousActionExecutor:
         )
         return message
 
-    def _render_content(
+    async def _render_content(
         self,
         *,
         character: CharacterState,
@@ -200,6 +204,10 @@ class AutonomousActionExecutor:
         target_id: str | None = None,
         target_display_name: str | None = None,
     ) -> str:
+        relationship_context = await self._build_relationship_context(
+            character=character,
+            target_id=target_id or decision.target_id,
+        )
         expression_input = ExpressionInput(
             character_id=character.id,
             display_name=character.display_name,
@@ -222,9 +230,60 @@ class AutonomousActionExecutor:
                 )
                 for event in visible_context.recent_events
             ],
+            relationship_context=relationship_context,
         )
         expression = self.expression_generator.generate(expression_input=expression_input)
         return expression.content
+
+    async def _build_relationship_context(
+        self,
+        *,
+        character: CharacterState,
+        target_id: str | None,
+    ) -> list[ExpressionRelationshipSummary]:
+        if self.relationship_service is None:
+            return []
+
+        relationships = await self.relationship_service.list_relationships_for_character(
+            character_id=character.id
+        )
+        if not relationships:
+            return []
+
+        top_limit = 3
+        sorted_relationships = sorted(
+            relationships,
+            key=lambda item: (
+                item.target_character_id != target_id,
+                -item.affinity,
+                item.target_character_id,
+            ),
+        )
+        selected_relationships: list[ExpressionRelationshipSummary] = []
+        seen_target_ids: set[str] = set()
+
+        for relationship in sorted_relationships:
+            if relationship.target_character_id in seen_target_ids:
+                continue
+            target_character = self.runtime.get_character(relationship.target_character_id)
+            selected_relationships.append(
+                ExpressionRelationshipSummary(
+                    target_character_id=relationship.target_character_id,
+                    target_display_name=(
+                        target_character.display_name
+                        if target_character is not None
+                        else relationship.target_character_id
+                    ),
+                    affinity=relationship.affinity,
+                    labels=relationship.labels,
+                    is_primary_target=relationship.target_character_id == target_id,
+                )
+            )
+            seen_target_ids.add(relationship.target_character_id)
+            if len(selected_relationships) >= top_limit:
+                break
+
+        return selected_relationships
 
     async def _apply_relationship_updates(
         self,

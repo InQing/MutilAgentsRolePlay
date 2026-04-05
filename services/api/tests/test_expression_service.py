@@ -1,6 +1,10 @@
 from app.agent_runtime.types import ActionType
 from app.character.models import CharacterProfile
-from app.expression.models import ExpressionInput, ExpressionRecentEvent
+from app.expression.models import (
+    ExpressionInput,
+    ExpressionRecentEvent,
+    ExpressionRelationshipSummary,
+)
 from app.expression.service import CharacterExpressionService
 from app.expression.template import TemplateExpressionGenerator
 from app.llm.expression_prompting import (
@@ -54,6 +58,15 @@ def _build_expression_input(
             ExpressionRecentEvent(
                 kind="director_note",
                 summary="有人刚在世界里提到晚上的安排。",
+            )
+        ],
+        relationship_context=[
+            ExpressionRelationshipSummary(
+                target_character_id="char-002",
+                target_display_name="许遥",
+                affinity=0.42,
+                labels=["recent_private_contact"],
+                is_primary_target=False,
             )
         ],
     )
@@ -192,3 +205,6 @@ def test_expression_prompts_include_strict_output_rules_and_action_guidance() ->
     assert "不要输出角色名、冒号" in system_prompt
     assert "这是群聊发言" in user_prompt
     assert "不要添加角色名、冒号、引号" in user_prompt
+    assert "与该角色自身有关的关系摘要" in user_prompt
+    assert "许遥" in user_prompt
+    assert "recent_private_contact" in user_prompt

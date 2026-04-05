@@ -12,6 +12,14 @@ class ExpressionRecentEvent(BaseModel):
     is_directed_at_character: bool = False
 
 
+class ExpressionRelationshipSummary(BaseModel):
+    target_character_id: str
+    target_display_name: str
+    affinity: float
+    labels: list[str] = Field(default_factory=list)
+    is_primary_target: bool = False
+
+
 class ExpressionInput(BaseModel):
     character_id: str
     display_name: str
@@ -25,6 +33,7 @@ class ExpressionInput(BaseModel):
     target_id: str | None = None
     target_display_name: str | None = None
     recent_context: list[ExpressionRecentEvent] = Field(default_factory=list)
+    relationship_context: list[ExpressionRelationshipSummary] = Field(default_factory=list)
 
 
 class ExpressionOutput(BaseModel):

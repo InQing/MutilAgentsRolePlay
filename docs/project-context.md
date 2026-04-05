@@ -74,6 +74,7 @@ V1 暂不包含：
   - 自治执行器执行动作
   - 动作写入会话与消息表
   - follow-up task 自动续排
+- 表达层当前已接入角色自身关系网摘要，可在生成文本时读取“自己与其他角色的关系边”，但尚未接入完整聊天消息级上下文
 - 当前调度链路已升级为“计划对象 + 调度任务”的组合，plan 可持久化并在重启后恢复
 - SQLite 轻量本地模式已跑通
 - 后端本地测试已通过 30 项
@@ -668,7 +669,7 @@ MutilAgentsRolePlay/
 原因：
 
 - 先让动作决策与文本表达解耦
-- 先把角色画像、情绪、当前计划和 recent context 正式接入表达输入
+- 先把角色画像、情绪、当前计划、角色自身关系网摘要和 recent context 正式接入表达输入
 - 先保证默认链路仍可预测、可测试
 
 当前默认表达实现仍然是模板 fallback，但它已经不再直接写在 executor 中。当前 `LLMClient` 已新增 provider-agnostic 工厂与两类真实 provider 通道：
@@ -678,7 +679,7 @@ MutilAgentsRolePlay/
 
 因此后续如果要接入真正角色表达生成，应继续沿表达层扩展，通过 `LLMClient` 配置具体 provider，而不是改 runtime 主骨架。
 
-当前表达层已经直接读取 `character` 域中的角色画像、当前计划、情绪和 recent context，不再在表达层内部临时定义 persona。
+当前表达层已经直接读取 `character` 域中的角色画像、当前计划、情绪、角色自身关系网摘要和 recent context，不再在表达层内部临时定义 persona。
 
 ### 10.4 当前 follow-up task 策略
 

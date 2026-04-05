@@ -33,6 +33,18 @@ class RelationshipService:
             repository = AsyncRelationshipRepository(session)
             return await repository.list_for_world(world_id=self.world_id)
 
+    async def list_relationships_for_character(
+        self,
+        *,
+        character_id: str,
+    ) -> list[RelationshipSnapshot]:
+        relationships = await self.list_relationships()
+        return [
+            relationship
+            for relationship in relationships
+            if relationship.source_character_id == character_id
+        ]
+
     async def delete_character_relationships(self, *, character_id: str) -> None:
         async with self.database.session_factory() as session:
             async with session.begin():
